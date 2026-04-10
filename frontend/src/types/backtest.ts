@@ -6,6 +6,12 @@ export interface StrategyParams {
   stop_loss_pct: number
   add_position_pct: number
   half_position_ratio: number
+  // 三因子计算参数
+  bias_n: number
+  momentum_day: number
+  slope_n: number
+  efficiency_n: number
+  zscore_window: number
 }
 
 export const DEFAULT_STRATEGY_PARAMS: StrategyParams = {
@@ -16,6 +22,11 @@ export const DEFAULT_STRATEGY_PARAMS: StrategyParams = {
   stop_loss_pct: 0.05,
   add_position_pct: 0.05,
   half_position_ratio: 0.5,
+  bias_n: 20,
+  momentum_day: 20,
+  slope_n: 20,
+  efficiency_n: 20,
+  zscore_window: 60,
 }
 
 export interface Trade {

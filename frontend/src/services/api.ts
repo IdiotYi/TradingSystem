@@ -17,3 +17,8 @@ export async function runBacktest(request: BacktestRequest): Promise<BacktestRes
   const { data } = await client.post<BacktestResponse>('/backtest/run', request)
   return data
 }
+
+export async function refreshData(stockCode: string): Promise<{ stock_code: string; rows: number; date_from: string; date_to: string }> {
+  const { data } = await client.post('/data/refresh', { stock_code: stockCode })
+  return data
+}

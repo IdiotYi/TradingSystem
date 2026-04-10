@@ -13,6 +13,12 @@ class StrategyParams(BaseModel):
     stop_loss_pct: float = 0.05
     add_position_pct: float = 0.05
     half_position_ratio: float = 0.5
+    # 三因子计算参数
+    bias_n: int = 20
+    momentum_day: int = 20
+    slope_n: int = 20
+    efficiency_n: int = 20
+    zscore_window: int = 60
 
 
 class BacktestRequest(BaseModel):

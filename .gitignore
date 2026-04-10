@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.pyc
 *.pyo
@@ -9,5 +10,17 @@ build/
 .venv/
 venv/
 .env
+
+# Data cache (downloaded at runtime)
+data/
+
+# Logs
+*.log
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Frontend
 node_modules/
+frontend/dist/

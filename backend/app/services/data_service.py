@@ -17,45 +17,50 @@ def normalize_code(stock_code: str) -> str:
     return code
 
 
+def _exchange_prefix(code: str) -> str:
+    if code.startswith("6"):
+        return f"sh{code}"
+    elif code.startswith(("0", "3")):
+        return f"sz{code}"
+    elif code.startswith(("8", "4")):
+        return f"bj{code}"
+    return f"sz{code}"
+
+
 def _download(code: str, csv_path: Path) -> None:
     """Download stock/ETF data via akshare with fallback chain. Raises ValueError if all fail."""
     df = None
 
-    # 1. stock_zh_a_hist (preferred for A-shares)
+    # 1. stock_zh_a_daily 新浪财经（与参考项目 backtest.py 数据源一致）
     try:
-        df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
-        if df is None or df.empty:
+        sym = _exchange_prefix(code)
+        df = ak.stock_zh_a_daily(symbol=sym, adjust="qfq")
+        if df is not None and not df.empty:
+            df.rename(columns={
+                "date": "日期", "open": "开盘", "high": "最高",
+                "low": "最低", "close": "收盘", "volume": "成交量",
+                "amount": "成交额", "outstanding_share": "流通股本",
+                "turnover": "换手率",
+            }, inplace=True)
+            df.insert(1, "股票代码", code)
+        else:
             df = None
     except Exception:
         df = None
 
-    # 2. stock_zh_a_daily (fallback)
+    # 2. stock_zh_a_hist 东方财富（fallback）
     if df is None or df.empty:
         try:
-            if code.startswith("6"):
-                sym = f"sh{code}"
-            elif code.startswith(("0", "3")):
-                sym = f"sz{code}"
-            elif code.startswith(("8", "4")):
-                sym = f"bj{code}"
-            else:
-                sym = f"sz{code}"
-            df = ak.stock_zh_a_daily(symbol=sym, adjust="qfq")
-            if df is not None and not df.empty:
-                df.rename(columns={
-                    "date": "日期", "open": "开盘", "high": "最高",
-                    "low": "最低", "close": "收盘", "volume": "成交量",
-                    "amount": "成交额", "outstanding_share": "流通股本",
-                    "turnover": "换手率",
-                }, inplace=True)
-                df.insert(1, "股票代码", code)
+            df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
+            if df is None or df.empty:
+                df = None
         except Exception:
             df = None
 
-    # 3. fund_etf_hist_sina (ETF fallback)
+    # 3. fund_etf_hist_sina 新浪ETF（ETF fallback）
     if df is None or df.empty:
         try:
-            sym = f"sh{code}" if code.startswith("6") else f"sz{code}"
+            sym = _exchange_prefix(code)
             df = ak.fund_etf_hist_sina(symbol=sym)
             if df is not None and not df.empty:
                 df.rename(columns={
@@ -73,6 +78,22 @@ def _download(code: str, csv_path: Path) -> None:
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+
+
+def refresh_stock_data(stock_code: str) -> dict:
+    """Force-download latest data, overwriting any existing CSV."""
+    code = normalize_code(stock_code)
+    csv_path = DATA_DIR / f"{code}.csv"
+    _download(code, csv_path)  # always downloads, ignores existing file
+    df = pd.read_csv(csv_path, encoding="utf-8-sig")
+    df["日期"] = pd.to_datetime(df["日期"]).dt.strftime("%Y-%m-%d")
+    df = df.sort_values("日期").reset_index(drop=True)
+    return {
+        "stock_code": code,
+        "rows": len(df),
+        "date_from": df["日期"].iloc[0],
+        "date_to": df["日期"].iloc[-1],
+    }
 
 
 def load_stock_data(stock_code: str) -> pd.DataFrame:

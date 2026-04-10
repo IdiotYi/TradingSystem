@@ -30,6 +30,11 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         stop_loss_pct: values.stop_loss_pct / 100,
         add_position_pct: values.add_position_pct / 100,
         half_position_ratio: values.half_position_ratio / 100,
+        bias_n: values.bias_n,
+        momentum_day: values.momentum_day,
+        slope_n: values.slope_n,
+        efficiency_n: values.efficiency_n,
+        zscore_window: values.zscore_window,
       },
     }
     onRun(req)
@@ -53,6 +58,11 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         stop_loss_pct: p.stop_loss_pct * 100,
         add_position_pct: p.add_position_pct * 100,
         half_position_ratio: p.half_position_ratio * 100,
+        bias_n: p.bias_n,
+        momentum_day: p.momentum_day,
+        slope_n: p.slope_n,
+        efficiency_n: p.efficiency_n,
+        zscore_window: p.zscore_window,
       }}
       style={{ background: '#161b22', padding: 16, borderRadius: 8, border: '1px solid #30363d', marginBottom: 16 }}
     >
@@ -107,6 +117,34 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
               <Col>
                 <Form.Item label="初始仓位 (%)" name="half_position_ratio">
                   <InputNumber min={10} max={100} style={{ width: 80 }} />
+                </Form.Item>
+              </Col>
+              <Col span={24} style={{ borderTop: '1px solid #30363d', marginTop: 8, paddingTop: 8 }}>
+                <span style={{ color: '#8b949e', fontSize: 12 }}>三因子计算参数</span>
+              </Col>
+              <Col>
+                <Form.Item label="乖离率窗口" name="bias_n" tooltip="乖离率计算所用移动均线周期（交易日）">
+                  <InputNumber min={5} max={250} style={{ width: 80 }} />
+                </Form.Item>
+              </Col>
+              <Col>
+                <Form.Item label="动量回看天数" name="momentum_day" tooltip="对乖离率序列做线性拟合时使用的历史天数">
+                  <InputNumber min={5} max={250} style={{ width: 80 }} />
+                </Form.Item>
+              </Col>
+              <Col>
+                <Form.Item label="斜率窗口" name="slope_n" tooltip="对价格归一化序列做线性拟合时使用的历史天数">
+                  <InputNumber min={5} max={250} style={{ width: 80 }} />
+                </Form.Item>
+              </Col>
+              <Col>
+                <Form.Item label="效率窗口" name="efficiency_n" tooltip="计算价格路径效率比时使用的历史天数">
+                  <InputNumber min={5} max={250} style={{ width: 80 }} />
+                </Form.Item>
+              </Col>
+              <Col>
+                <Form.Item label="Z-score窗口" name="zscore_window" tooltip="对各因子做滚动标准化时的窗口大小（约1年=250）">
+                  <InputNumber min={50} max={500} style={{ width: 80 }} />
                 </Form.Item>
               </Col>
             </Row>

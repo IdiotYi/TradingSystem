@@ -4,7 +4,7 @@ Fee logic and strategy ported from C:/PrivateProjects/TradingStrategy/backtest.p
 """
 import pandas as pd
 import numpy as np
-from app.core.three_factors import compute_three_factors
+from app.core.three_factors import compute_three_factors, BIAS_N, MOMENTUM_DAY, SLOPE_N, EFFICIENCY_N, ZSCORE_WINDOW
 from app.core.indicators import calc_ma, calc_supertrend
 from app.services.data_service import load_stock_data
 
@@ -141,8 +141,15 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     df_all = load_stock_data(stock_code)
     df_all = df_all[df_all["日期"] <= end_date].reset_index(drop=True)
 
-    # Compute factors on full history (no lookahead)
-    factors = compute_three_factors(df_all)
+    # Compute factors on full history (no lookahead), using caller-supplied params
+    factors = compute_three_factors(
+        df_all,
+        bias_n=strategy_params.get("bias_n", BIAS_N),
+        momentum_day=strategy_params.get("momentum_day", MOMENTUM_DAY),
+        slope_n=strategy_params.get("slope_n", SLOPE_N),
+        efficiency_n=strategy_params.get("efficiency_n", EFFICIENCY_N),
+        zscore_window=strategy_params.get("zscore_window", ZSCORE_WINDOW),
+    )
     df_all = df_all.merge(factors, on="日期", how="left")
 
     df = df_all[df_all["日期"] >= start_date].reset_index(drop=True)
