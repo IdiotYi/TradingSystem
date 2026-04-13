@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from app.core.indicators import calc_ma, calc_supertrend
+from app.core.indicators import calc_ma, calc_supertrend, calc_kama
 from app.services.data_service import load_stock_data
 
 
@@ -21,7 +21,10 @@ def get_analysis_data(stock_code: str) -> dict:
     ma5 = calc_ma(close, 5)
     ma20 = calc_ma(close, 20)
     ma60 = calc_ma(close, 60)
-    supertrend, direction = calc_supertrend(high, low, close, period=10, multiplier=3.0)
+    kama = calc_kama(close, period=10, fast=2, slow=30)
+    supertrend, direction = calc_supertrend(high, low, close, period=10, multiplier=1.0)
+    supertrend2, direction2 = calc_supertrend(high, low, close, period=11, multiplier=2.0)
+    supertrend3, direction3 = calc_supertrend(high, low, close, period=12, multiplier=3.0)
 
     # Price percentiles over full history
     close_valid = close.dropna().values
@@ -47,10 +50,13 @@ def get_analysis_data(stock_code: str) -> dict:
         "ma5": _to_list(ma5),
         "ma20": _to_list(ma20),
         "ma60": _to_list(ma60),
+        "kama": _to_list(kama),
         "supertrend": _to_list(supertrend),
-        "supertrend_direction": [
-            None if pd.isna(v) else int(v) for v in direction
-        ],
+        "supertrend_direction": [None if pd.isna(v) else int(v) for v in direction],
+        "supertrend2": _to_list(supertrend2),
+        "supertrend2_direction": [None if pd.isna(v) else int(v) for v in direction2],
+        "supertrend3": _to_list(supertrend3),
+        "supertrend3_direction": [None if pd.isna(v) else int(v) for v in direction3],
         "current_price": round(float(close.iloc[-1]), 2),
         "p20": round(float(p20), 2),
         "p50": round(float(p50), 2),

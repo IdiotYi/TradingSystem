@@ -8,6 +8,29 @@ def calc_ma(close: pd.Series, period: int) -> pd.Series:
     return close.rolling(window=period).mean()
 
 
+def calc_kama(close: pd.Series, period: int = 10, fast: int = 2, slow: int = 30) -> pd.Series:
+    """
+    Kaufman Adaptive Moving Average (KAMA).
+    period: efficiency-ratio lookback; fast/slow: EMA periods for SC bounds.
+    """
+    n = len(close)
+    close_arr = close.values.astype(float)
+    kama = np.full(n, np.nan)
+
+    fast_sc = 2.0 / (fast + 1)
+    slow_sc = 2.0 / (slow + 1)
+
+    kama[period - 1] = close_arr[period - 1]
+    for i in range(period, n):
+        direction = abs(close_arr[i] - close_arr[i - period])
+        volatility = np.sum(np.abs(np.diff(close_arr[i - period: i + 1])))
+        er = direction / volatility if volatility > 0 else 0.0
+        sc = (er * (fast_sc - slow_sc) + slow_sc) ** 2
+        kama[i] = kama[i - 1] + sc * (close_arr[i] - kama[i - 1])
+
+    return pd.Series(kama, index=close.index)
+
+
 def calc_supertrend(
     high: pd.Series,
     low: pd.Series,

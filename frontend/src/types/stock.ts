@@ -10,8 +10,13 @@ export interface AnalysisResponse {
   ma5: (number | null)[]
   ma20: (number | null)[]
   ma60: (number | null)[]
+  kama: (number | null)[]
   supertrend: (number | null)[]
   supertrend_direction: (number | null)[]
+  supertrend2: (number | null)[]
+  supertrend2_direction: (number | null)[]
+  supertrend3: (number | null)[]
+  supertrend3_direction: (number | null)[]
   current_price: number
   p20: number
   p50: number

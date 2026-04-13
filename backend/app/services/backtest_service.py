@@ -130,6 +130,37 @@ def _run_strategy(df: pd.DataFrame, initial_cash: float, params: dict) -> tuple:
     return trades, cash, shares
 
 
+# ── Buy-and-hold strategy ────────────────────────────────────
+
+def _run_buy_and_hold(df: pd.DataFrame, initial_cash: float) -> tuple:
+    """Buy full position on first day and hold."""
+    trades = []
+    cash = initial_cash
+    shares = 0
+
+    row = df.iloc[0]
+    price = float(row["收盘"])
+    n = int(cash // (price * 100)) * 100
+    if n > 0:
+        amount = n * price
+        fees = _buy_fees(amount)
+        while n > 0 and (amount + fees["total_fee"]) > cash:
+            n -= 100
+            amount = n * price
+            fees = _buy_fees(amount)
+        if n > 0:
+            cash -= amount + fees["total_fee"]
+            shares = n
+            trades.append({
+                "date": row["日期"], "direction": "买入", "reason": "买入持有",
+                "price": round(price, 2), "shares": n,
+                "amount": round(amount, 2), **fees,
+                "pnl": None, "remaining_cash": round(cash, 2),
+            })
+
+    return trades, cash, shares
+
+
 # ── Public API ───────────────────────────────────────────────
 
 def _to_list(s: pd.Series) -> list:
@@ -137,26 +168,30 @@ def _to_list(s: pd.Series) -> list:
 
 
 def run_backtest(stock_code: str, start_date: str, end_date: str,
-                 initial_cash: float, strategy_params: dict) -> dict:
+                 initial_cash: float, strategy_params: dict,
+                 strategy_name: str = "three_factors") -> dict:
     df_all = load_stock_data(stock_code)
     df_all = df_all[df_all["日期"] <= end_date].reset_index(drop=True)
 
-    # Compute factors on full history (no lookahead), using caller-supplied params
-    factors = compute_three_factors(
-        df_all,
-        bias_n=strategy_params.get("bias_n", BIAS_N),
-        momentum_day=strategy_params.get("momentum_day", MOMENTUM_DAY),
-        slope_n=strategy_params.get("slope_n", SLOPE_N),
-        efficiency_n=strategy_params.get("efficiency_n", EFFICIENCY_N),
-        zscore_window=strategy_params.get("zscore_window", ZSCORE_WINDOW),
-    )
-    df_all = df_all.merge(factors, on="日期", how="left")
+    if strategy_name == "three_factors":
+        factors = compute_three_factors(
+            df_all,
+            bias_n=strategy_params.get("bias_n", BIAS_N),
+            momentum_day=strategy_params.get("momentum_day", MOMENTUM_DAY),
+            slope_n=strategy_params.get("slope_n", SLOPE_N),
+            efficiency_n=strategy_params.get("efficiency_n", EFFICIENCY_N),
+            zscore_window=strategy_params.get("zscore_window", ZSCORE_WINDOW),
+        )
+        df_all = df_all.merge(factors, on="日期", how="left")
 
     df = df_all[df_all["日期"] >= start_date].reset_index(drop=True)
     if df.empty:
         raise ValueError(f"{start_date} ~ {end_date} 期间无交易数据")
 
-    trades, final_cash, final_shares = _run_strategy(df, initial_cash, strategy_params)
+    if strategy_name == "buy_and_hold":
+        trades, final_cash, final_shares = _run_buy_and_hold(df, initial_cash)
+    else:
+        trades, final_cash, final_shares = _run_strategy(df, initial_cash, strategy_params)
 
     # Indicators for chart
     close = df["收盘"]; high = df["最高"]; low = df["最低"]; open_ = df["开盘"]
@@ -176,6 +211,8 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     bh_return = (bh_assets - initial_cash) / initial_cash
 
     def score_list(col):
+        if col not in df.columns:
+            return [None] * len(df)
         return [None if pd.isna(v) else round(float(v), 6) for v in df[col]]
 
     return {

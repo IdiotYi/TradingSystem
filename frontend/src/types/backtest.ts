@@ -79,5 +79,6 @@ export interface BacktestRequest {
   start_date: string
   end_date: string
   initial_cash: number
+  strategy_name: string
   strategy_params: StrategyParams
 }

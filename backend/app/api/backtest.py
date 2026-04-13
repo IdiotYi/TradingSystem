@@ -26,6 +26,7 @@ class BacktestRequest(BaseModel):
     start_date: str
     end_date: str
     initial_cash: float = 100000.0
+    strategy_name: str = "three_factors"
     strategy_params: StrategyParams = StrategyParams()
 
 
@@ -37,6 +38,7 @@ async def run_backtest_endpoint(request: BacktestRequest):
             start_date=request.start_date,
             end_date=request.end_date,
             initial_cash=request.initial_cash,
+            strategy_name=request.strategy_name,
             strategy_params=request.strategy_params.model_dump(),
         )
     except ValueError as e:
