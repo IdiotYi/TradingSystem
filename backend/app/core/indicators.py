@@ -37,10 +37,12 @@ def calc_supertrend(
     close: pd.Series,
     period: int = 10,
     multiplier: float = 3.0,
-) -> Tuple[pd.Series, pd.Series]:
+    return_bands: bool = False,
+):
     """
     SuperTrend indicator.
     Returns (supertrend_values, direction) where direction=1 is uptrend, -1 is downtrend.
+    If return_bands=True, additionally returns (final_upper, final_lower).
     """
     n = len(close)
     index = close.index
@@ -116,4 +118,14 @@ def calc_supertrend(
                 direction[i] = 1
                 supertrend[i] = final_lower[i]
 
-    return pd.Series(supertrend, index=index), pd.Series(direction, index=index)
+    st_series = pd.Series(supertrend, index=index)
+    dir_series = pd.Series(direction, index=index)
+    if return_bands:
+        return (st_series, dir_series,
+                pd.Series(final_upper, index=index),
+                pd.Series(final_lower, index=index))
+    return st_series, dir_series
+
+
+def _calc_supertrend_with_bands(high, low, close, period, multiplier):
+    return calc_supertrend(high, low, close, period, multiplier, return_bands=True)

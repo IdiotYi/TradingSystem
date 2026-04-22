@@ -2,62 +2,55 @@ import React, { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { AnalysisResponse } from '../../types/stock'
 import { detectPriceDecimals } from '../../utils/priceFormat'
+import { computeWMA, computeWMAPred } from '../../utils/wma'
 
 interface Props {
   data: AnalysisResponse
 }
 
-function rollingMA(arr: (number | null)[], period: number): (number | null)[] {
-  return arr.map((_, i) => {
-    if (i < period - 1) return null
-    const slice = arr.slice(i - period + 1, i + 1)
-    if (slice.some(v => v === null)) return null
-    return (slice as number[]).reduce((s, v) => s + v, 0) / period
-  })
-}
+const TAIL = 250
 
-const KLineChart: React.FC<Props> = ({ data }) => {
+const WMAChart: React.FC<Props> = ({ data }) => {
   const option = useMemo(() => {
-    const {
-      dates, open, high, low, close, volume,
-      ma5, ma20, ma60, kama,
-      supertrend, supertrend_direction,
-      supertrend2, supertrend2_direction,
-      supertrend3, supertrend3_direction,
-    } = data
+    // Compute WMA on full history (recurrence needs full past), then slice last TAIL bars for display
+    const wma5Full  = computeWMA(data.open, data.close, 5)
+    const wma20Full = computeWMA(data.open, data.close, 20)
+    const wma60Full = computeWMA(data.open, data.close, 60)
+    const pred5Full  = computeWMAPred(data.open, wma5Full)
+    const pred20Full = computeWMAPred(data.open, wma20Full)
+    const pred60Full = computeWMAPred(data.open, wma60Full)
+
+    const n = data.dates.length
+    const start = Math.max(0, n - TAIL)
+    const dates  = data.dates.slice(start)
+    const open   = data.open.slice(start)
+    const high   = data.high.slice(start)
+    const low    = data.low.slice(start)
+    const close  = data.close.slice(start)
+    const volume = data.volume.slice(start)
+    const wma5   = wma5Full.slice(start)
+    const wma20  = wma20Full.slice(start)
+    const wma60  = wma60Full.slice(start)
+    const pred5  = pred5Full.slice(start)
+    const pred20 = pred20Full.slice(start)
+    const pred60 = pred60Full.slice(start)
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
-
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
 
-    // ST series
-    const stUp   = supertrend.map((v, i) => (supertrend_direction[i] === 1  ? v : null))
-    const stDown = supertrend.map((v, i) => (supertrend_direction[i] === -1 ? v : null))
-    const st2Up  = supertrend2.map((v, i) => (supertrend2_direction[i] === 1  ? v : null))
-    const st2Down = supertrend2.map((v, i) => (supertrend2_direction[i] === -1 ? v : null))
-    const st3Up  = supertrend3.map((v, i) => (supertrend3_direction[i] === 1  ? v : null))
-    const st3Down = supertrend3.map((v, i) => (supertrend3_direction[i] === -1 ? v : null))
-
-    // Volume bars — red if close >= open (up day), green otherwise
     const volData = volume.map((v, i) => ({
       value: v,
       itemStyle: {
         color: (close[i] ?? 0) >= (open[i] ?? 0) ? '#ef5350' : '#26a69a',
       },
     }))
-    const volMA5  = rollingMA(volume, 5)
-    const volMA20 = rollingMA(volume, 20)
 
     return {
       backgroundColor: '#0d1117',
       animation: false,
       axisPointer: { link: [{ xAxisIndex: 'all' }] },
       legend: {
-        data: ['K线', 'MA5', 'MA20', 'MA60', 'KAMA',
-               'ST(10,1)↑', 'ST(10,1)↓',
-               'ST(11,2)↑', 'ST(11,2)↓',
-               'ST(12,3)↑', 'ST(12,3)↓',
-               '量MA5', '量MA20'],
+        data: ['K线', 'WMA5', 'WMA20', 'WMA60', 'WMAPred5', 'WMAPred20', 'WMAPred60'],
         top: 8,
         textStyle: { color: '#8b949e' },
         inactiveColor: '#444',
@@ -80,7 +73,6 @@ const KLineChart: React.FC<Props> = ({ data }) => {
             if (v == null) return
             html += `<div style="color:${p.color}">${p.seriesName}: ${Number(v).toFixed(priceDecimals)}</div>`
           })
-          // volume
           if (volume[idx] != null) {
             const fmt = (v: number) => v >= 1e8 ? `${(v / 1e8).toFixed(2)}亿` : v >= 1e4 ? `${(v / 1e4).toFixed(0)}万` : String(v)
             html += `<div style="color:#8b949e">成交量: ${fmt(volume[idx] as number)}</div>`
@@ -137,7 +129,6 @@ const KLineChart: React.FC<Props> = ({ data }) => {
         },
       ],
       series: [
-        // ── K-line grid ──────────────────────────────────────
         {
           name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0,
           data: candleData,
@@ -146,36 +137,23 @@ const KLineChart: React.FC<Props> = ({ data }) => {
             borderColor: '#ef5350', borderColor0: '#26a69a',
           },
         },
-        { name: 'MA5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma5,
+        { name: 'WMA5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: wma5,
           lineStyle: { color: '#ffffff', width: 1 }, showSymbol: false },
-        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20,
+        { name: 'WMA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: wma20,
           lineStyle: { color: '#ffd700', width: 1 }, showSymbol: false },
-        { name: 'MA60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma60,
+        { name: 'WMA60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: wma60,
           lineStyle: { color: '#1890ff', width: 1 }, showSymbol: false },
-        { name: 'KAMA', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: kama,
-          lineStyle: { color: '#b57bee', width: 1.5 }, showSymbol: false },
-        { name: 'ST(10,1)↑', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: stUp,
-          lineStyle: { color: '#4caf50', width: 2 }, showSymbol: false, connectNulls: false },
-        { name: 'ST(10,1)↓', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: stDown,
-          lineStyle: { color: '#f44336', width: 2 }, showSymbol: false, connectNulls: false },
-        { name: 'ST(11,2)↑', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: st2Up,
-          lineStyle: { color: '#69f0ae', width: 1.5, type: 'dashed' }, showSymbol: false, connectNulls: false },
-        { name: 'ST(11,2)↓', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: st2Down,
-          lineStyle: { color: '#ff8a80', width: 1.5, type: 'dashed' }, showSymbol: false, connectNulls: false },
-        { name: 'ST(12,3)↑', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: st3Up,
-          lineStyle: { color: '#00796b', width: 1.5, type: 'dotted' }, showSymbol: false, connectNulls: false },
-        { name: 'ST(12,3)↓', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: st3Down,
-          lineStyle: { color: '#c62828', width: 1.5, type: 'dotted' }, showSymbol: false, connectNulls: false },
-        // ── Volume grid ──────────────────────────────────────
+        { name: 'WMAPred5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred5,
+          lineStyle: { color: '#ffffff', width: 1, type: 'dashed' }, showSymbol: false },
+        { name: 'WMAPred20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred20,
+          lineStyle: { color: '#ffd700', width: 1, type: 'dashed' }, showSymbol: false },
+        { name: 'WMAPred60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred60,
+          lineStyle: { color: '#1890ff', width: 1, type: 'dashed' }, showSymbol: false },
         {
           name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1,
           data: volData,
           barMaxWidth: 6,
         },
-        { name: '量MA5',  type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: volMA5,
-          lineStyle: { color: '#ffffff', width: 1 }, showSymbol: false },
-        { name: '量MA20', type: 'line', xAxisIndex: 1, yAxisIndex: 1, data: volMA20,
-          lineStyle: { color: '#ffd700', width: 1 }, showSymbol: false },
       ],
     }
   }, [data])
@@ -189,4 +167,4 @@ const KLineChart: React.FC<Props> = ({ data }) => {
   )
 }
 
-export default KLineChart
+export default WMAChart

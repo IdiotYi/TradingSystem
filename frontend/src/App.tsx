@@ -4,6 +4,7 @@ import './App.css'
 import Header from './components/layout/Header'
 import TechnicalTab from './components/technical/TechnicalTab'
 import BacktestTab from './components/backtest/BacktestTab'
+import IndicatorTestTab from './components/indicator-test/IndicatorTestTab'
 import { runAnalysis } from './services/api'
 import type { AnalysisResponse } from './types/stock'
 
@@ -46,6 +47,15 @@ const App: React.FC = () => {
         </div>
       ),
       disabled: !stockCode,
+    },
+    {
+      key: 'indicator-test',
+      label: '指标测试',
+      children: (
+        <div className="tab-pane-inner">
+          <IndicatorTestTab data={analysisData} loading={loading} />
+        </div>
+      ),
     },
   ]
 

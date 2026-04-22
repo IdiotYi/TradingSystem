@@ -19,6 +19,8 @@ class StrategyParams(BaseModel):
     slope_n: int = 20
     efficiency_n: int = 20
     zscore_window: int = 60
+    # SuperTrend+MA 参数
+    recent_high_window: int = 25
 
 
 class BacktestRequest(BaseModel):
@@ -44,4 +46,6 @@ async def run_backtest_endpoint(request: BacktestRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"回测失败: {e}")

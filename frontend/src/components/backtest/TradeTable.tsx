@@ -2,12 +2,16 @@ import React from 'react'
 import { Table, Tag } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import type { Trade } from '../../types/backtest'
+import { detectPriceDecimals } from '../../utils/priceFormat'
 
 interface Props { trades: Trade[] }
 
 const fmtCny = (n: number) => `¥${n.toFixed(2)}`
 
 const TradeTable: React.FC<Props> = ({ trades }) => {
+  const priceDecimals = detectPriceDecimals(trades.map(t => t.price))
+  const fmtPrice = (n: number) => `¥${n.toFixed(priceDecimals)}`
+
   const columns: ColumnsType<Trade & { key: number }> = [
     { title: '日期', dataIndex: 'date', key: 'date', width: 110, fixed: 'left' as const },
     {
@@ -15,7 +19,7 @@ const TradeTable: React.FC<Props> = ({ trades }) => {
       render: (v: string) => <Tag color={v === '买入' ? 'red' : 'cyan'}>{v}</Tag>,
     },
     { title: '原因', dataIndex: 'reason', key: 'reason', width: 150 },
-    { title: '价格', dataIndex: 'price', key: 'price', width: 90, render: fmtCny },
+    { title: '价格', dataIndex: 'price', key: 'price', width: 90, render: fmtPrice },
     { title: '数量 (股)', dataIndex: 'shares', key: 'shares', width: 90, align: 'right' as const },
     { title: '成交金额', dataIndex: 'amount', key: 'amount', width: 110, render: fmtCny, align: 'right' as const },
     { title: '过户费', dataIndex: 'transfer_fee', key: 'transfer_fee', width: 90, render: fmtCny, align: 'right' as const },
