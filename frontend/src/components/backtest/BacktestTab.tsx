@@ -21,7 +21,13 @@ const BacktestTab: React.FC<Props> = ({ stockCode }) => {
       const data = await runBacktest(req)
       setResult(data)
     } catch (err: any) {
-      message.error(err?.response?.data?.detail || `回测失败: ${err.message}`)
+      const detail = err?.response?.data?.detail
+      const msg = typeof detail === 'string'
+        ? detail
+        : detail
+          ? JSON.stringify(detail)
+          : `回测失败: ${err.message}`
+      message.error(msg)
     } finally {
       setLoading(false)
     }

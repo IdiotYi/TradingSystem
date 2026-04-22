@@ -2,12 +2,11 @@ import React from 'react'
 import { Card, Row, Col, Statistic, Tag } from 'antd'
 import { ArrowDownOutlined } from '@ant-design/icons'
 import type { AnalysisResponse } from '../../types/stock'
+import { detectPriceDecimals } from '../../utils/priceFormat'
 
 interface Props {
   data: AnalysisResponse
 }
-
-const fmt = (n: number) => n.toFixed(2)
 
 const AnalysisCards: React.FC<Props> = ({ data }) => {
   const {
@@ -16,6 +15,12 @@ const AnalysisCards: React.FC<Props> = ({ data }) => {
     drawdown_peak_date, drawdown_peak_price,
     drawdown_trough_date, drawdown_trough_price,
   } = data
+
+  const priceDecimals = detectPriceDecimals([
+    ...data.close, ...data.open, ...data.high, ...data.low,
+    current_price, p20, p50, p80, drawdown_peak_price, drawdown_trough_price,
+  ])
+  const fmt = (n: number) => n.toFixed(priceDecimals)
 
   const priceTag = () => {
     if (current_price <= p20) return <Tag color="green">低位 (≤P20)</Tag>
@@ -33,7 +38,7 @@ const AnalysisCards: React.FC<Props> = ({ data }) => {
         >
           <Statistic
             value={current_price}
-            precision={2}
+            precision={priceDecimals}
             prefix="¥"
             valueStyle={{ color: '#e6edf3', fontSize: 24 }}
           />

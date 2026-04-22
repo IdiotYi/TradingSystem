@@ -12,6 +12,8 @@ export interface StrategyParams {
   slope_n: number
   efficiency_n: number
   zscore_window: number
+  // SuperTrend+MA 参数
+  recent_high_window: number
 }
 
 export const DEFAULT_STRATEGY_PARAMS: StrategyParams = {
@@ -27,6 +29,7 @@ export const DEFAULT_STRATEGY_PARAMS: StrategyParams = {
   slope_n: 20,
   efficiency_n: 20,
   zscore_window: 60,
+  recent_high_window: 25,
 }
 
 export interface Trade {
@@ -57,6 +60,7 @@ export interface BacktestSummary {
 
 export interface BacktestResponse {
   success: boolean
+  strategy_name: string
   dates: string[]
   open: (number | null)[]
   high: (number | null)[]
@@ -65,6 +69,7 @@ export interface BacktestResponse {
   ma5: (number | null)[]
   ma20: (number | null)[]
   ma60: (number | null)[]
+  kama: (number | null)[]
   supertrend: (number | null)[]
   supertrend_direction: (number | null)[]
   score: (number | null)[]

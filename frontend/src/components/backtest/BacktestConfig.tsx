@@ -15,6 +15,7 @@ interface Props {
 
 const STRATEGIES = [
   { value: 'three_factors', label: '三因子策略' },
+  { value: 'supertrend_ma', label: 'SuperTrend+MA' },
   { value: 'buy_and_hold', label: '买入持有' },
 ]
 
@@ -29,7 +30,7 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
       end_date: values.end_date.format('YYYY-MM-DD'),
       initial_cash: values.initial_cash,
       strategy_name: values.strategy_name,
-      strategy_params: {
+      strategy_params: values.strategy_name === 'three_factors' ? {
         score_rising_days: values.score_rising_days,
         oversold_std_mult: values.oversold_std_mult,
         take_profit_pct: values.take_profit_pct / 100,
@@ -42,7 +43,9 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         slope_n: values.slope_n,
         efficiency_n: values.efficiency_n,
         zscore_window: values.zscore_window,
-      },
+      } : values.strategy_name === 'supertrend_ma' ? {
+        recent_high_window: values.recent_high_window,
+      } as StrategyParams : {} as StrategyParams,
     }
     onRun(req)
   }
@@ -71,6 +74,7 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         slope_n: p.slope_n,
         efficiency_n: p.efficiency_n,
         zscore_window: p.zscore_window,
+        recent_high_window: p.recent_high_window,
       }}
       style={{ background: '#161b22', padding: 16, borderRadius: 8, border: '1px solid #30363d', marginBottom: 16 }}
     >
@@ -161,6 +165,30 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
                 <Col>
                   <Form.Item label="Z-score窗口" name="zscore_window" tooltip="对各因子做滚动标准化时的窗口大小（约1年=250）">
                     <InputNumber min={50} max={500} style={{ width: 80 }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            ),
+          }]}
+        />
+      )}
+
+      {strategy === 'supertrend_ma' && (
+        <Collapse
+          ghost
+          style={{ width: '100%', marginTop: 8 }}
+          items={[{
+            key: '1',
+            label: <span style={{ color: '#8b949e' }}>策略参数 ▾</span>,
+            children: (
+              <Row gutter={[16, 0]}>
+                <Col>
+                  <Form.Item
+                    label="新高回看天数"
+                    name="recent_high_window"
+                    tooltip="过去N个交易日内若出现过1年新高，则禁止产生买入信号"
+                  >
+                    <InputNumber min={1} max={250} style={{ width: 90 }} />
                   </Form.Item>
                 </Col>
               </Row>
