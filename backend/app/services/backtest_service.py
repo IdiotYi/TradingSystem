@@ -252,6 +252,174 @@ def _run_supertrend_ma(df: pd.DataFrame, initial_cash: float, params: dict) -> t
     return trades, cash, shares
 
 
+# ── SuperTrend + MA Version 2 strategy ───────────────────────
+
+def _run_supertrend_ma_v2(df: pd.DataFrame, initial_cash: float, params: dict) -> tuple:
+    """
+    SuperTrend+MA V2 — improved win-rate version.
+
+    与 V1 的差异：
+      * Entry-1 改为「健康回踩」：上升趋势 + MA20 上行 + 当日下影触 MA20 但收盘在 MA20 上方
+      * Entry-2 默认关闭，可由 enable_entry2 开启
+      * 固定 2% 止损 → ATR 动态止损：entry_price − atr_stop_mult × ATR(进场时)
+      * 个股波动率过滤：ATR/close >= vol_threshold 时不开仓
+      * 冷却期：止损/止盈后 cooldown_bars 个 bar 内禁止开仓
+      * 最小持仓 K 线数：min_hold_bars 内不触发 KAMA 止盈
+      * KAMA 止盈双重确认：close < kama AND close < ma20（且利润 > 2%）
+
+    所有触发条件均使用 bar i 收盘时已知的量（close/high/low/ma20/kama/st_*/ATR_i），
+    成交价 = 当日收盘价（与 V1 一致，符合"尾盘看盘"实操假设）。
+    """
+    recent_high_window = int(params.get("recent_high_window", 25))
+    enable_entry2 = bool(params.get("enable_entry2", False))
+    atr_stop_mult = float(params.get("atr_stop_mult", 1.8))
+    vol_threshold = float(params.get("vol_threshold", 0.06))
+    cooldown_bars = int(params.get("cooldown_bars", 5))
+    min_hold_bars = int(params.get("min_hold_bars", 3))
+    YEAR_BARS = 250
+
+    # Precompute 1-year rolling high flag
+    roll_max = df["最高"].rolling(window=YEAR_BARS, min_periods=YEAR_BARS).max()
+    is_year_high = (df["最高"] == roll_max) & roll_max.notna()
+
+    # Precompute ATR(12) Wilder for stop loss & vol filter
+    n = len(df)
+    high_arr = df["最高"].values.astype(float)
+    low_arr = df["最低"].values.astype(float)
+    close_arr = df["收盘"].values.astype(float)
+    prev_close = np.empty(n)
+    prev_close[0] = close_arr[0]
+    prev_close[1:] = close_arr[:-1]
+    tr = np.maximum(
+        high_arr - low_arr,
+        np.maximum(np.abs(high_arr - prev_close), np.abs(low_arr - prev_close)),
+    )
+    atr = np.empty(n)
+    atr[0] = tr[0]
+    alpha = 1.0 / 12
+    for k in range(1, n):
+        atr[k] = alpha * tr[k] + (1 - alpha) * atr[k - 1]
+
+    trades = []
+    cash = initial_cash
+    shares = 0
+    entry_price = 0.0
+    entry_atr = 0.0
+    entry_idx = -1
+    entry_type = None  # '1' or '2'
+    last_exit_idx = -10**9  # for cooldown
+
+    def sell_all(row, reason, idx):
+        nonlocal cash, shares, entry_price, entry_atr
+        nonlocal entry_type, entry_idx, last_exit_idx
+        price = float(row["收盘"])
+        amount = shares * price
+        fees = _sell_fees(amount)
+        cash += amount - fees["total_fee"]
+        trades.append({
+            "date": row["日期"], "direction": "卖出", "reason": reason,
+            "price": round(price, 4), "shares": shares,
+            "amount": round(amount, 2), **fees,
+            "pnl": round((price - entry_price) * shares - fees["total_fee"], 2),
+            "remaining_cash": round(cash, 2),
+        })
+        shares = 0
+        entry_price = 0.0; entry_atr = 0.0
+        entry_type = None; entry_idx = -1
+        last_exit_idx = idx
+
+    def buy_full(row, reason, etype, idx, atr_at_entry):
+        nonlocal cash, shares, entry_price, entry_atr, entry_type, entry_idx
+        price = float(row["收盘"])
+        n_sh = int(cash // (price * 100)) * 100
+        if n_sh == 0:
+            return False
+        amount = n_sh * price
+        fees = _buy_fees(amount)
+        while n_sh > 0 and (amount + fees["total_fee"]) > cash:
+            n_sh -= 100; amount = n_sh * price; fees = _buy_fees(amount)
+        if n_sh == 0:
+            return False
+        entry_price = price
+        entry_atr = atr_at_entry
+        entry_idx = idx
+        cash -= amount + fees["total_fee"]
+        shares = n_sh
+        entry_type = etype
+        trades.append({
+            "date": row["日期"], "direction": "买入", "reason": reason,
+            "price": round(price, 4), "shares": n_sh,
+            "amount": round(amount, 2), **fees,
+            "pnl": None, "remaining_cash": round(cash, 2),
+        })
+        return True
+
+    # 起点 i>=5：MA20 上行判定需要 5 bar 之前的 ma20
+    for i in range(5, len(df)):
+        row = df.iloc[i]
+        prev = df.iloc[i - 1]
+        close = float(row["收盘"])
+        high = float(row["最高"])
+        low = float(row["最低"])
+        ma20 = row["ma20"]
+        ma20_prev5 = df.iloc[i - 5]["ma20"]
+        kama = row["kama"]
+        st_dir = row["st_dir"]
+        st_upper = row["st_upper"]
+        st_lower = row["st_lower"]
+        prev_upper = prev["st_upper"]
+        atr_i = atr[i]
+
+        if pd.isna(ma20) or pd.isna(ma20_prev5) or pd.isna(kama) or \
+           pd.isna(st_dir) or pd.isna(st_upper) or pd.isna(st_lower):
+            continue
+
+        acted = False
+
+        # ── Exits ───────────────────────────────────────────
+        if shares > 0:
+            held = i - entry_idx
+            # ATR 动态止损（替代固定 2%）
+            if entry_atr > 0:
+                stop_price = entry_price - atr_stop_mult * entry_atr
+                if close <= stop_price:
+                    sell_all(row, f"ATR止损({atr_stop_mult}×ATR)", i)
+                    acted = True
+            # Entry-1 专属：跌破 SuperTrend 下轨
+            if not acted and entry_type == '1' and close < st_lower:
+                sell_all(row, "跌破SuperTrend下轨止损", i)
+                acted = True
+            # KAMA 止盈：双重确认 + 最小持仓 + 利润 > 2%
+            if not acted and held >= min_hold_bars \
+                    and close < kama and close < ma20 \
+                    and (close - entry_price) / entry_price > 0.02:
+                sell_all(row, "收盘双破KAMA&MA20止盈", i)
+                acted = True
+
+        # ── Entries ─────────────────────────────────────────
+        if not acted and shares == 0:
+            # 冷却期
+            if i - last_exit_idx <= cooldown_bars:
+                continue
+            # 1 年新高过滤
+            lookback_start = max(0, i - recent_high_window)
+            if is_year_high.iloc[lookback_start:i].any():
+                continue
+            # 波动率过滤
+            if close > 0 and atr_i / close >= vol_threshold:
+                continue
+
+            # Entry 1: 上升趋势 MA20 回踩不破
+            if st_dir == 1 and ma20 > ma20_prev5 and low <= ma20 <= close:
+                buy_full(row, "MA20回踩不破", '1', i, atr_i)
+            # Entry 2 (可选): 下降趋势突破上轨
+            elif enable_entry2 and st_dir == -1 and not pd.isna(prev_upper) \
+                    and ma20 < close < st_upper and high > prev_upper:
+                buy_full(row, "SuperTrend下降-突破上轨", '2', i, atr_i)
+
+    return trades, cash, shares
+
+
 # ── Buy-and-hold strategy ────────────────────────────────────
 
 def _run_buy_and_hold(df: pd.DataFrame, initial_cash: float) -> tuple:
@@ -306,7 +474,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         )
         df_all = df_all.merge(factors, on="日期", how="left")
 
-    if strategy_name == "supertrend_ma":
+    if strategy_name in ("supertrend_ma", "supertrend_ma_v2"):
         df_all["ma20"] = calc_ma(df_all["收盘"], 20)
         df_all["kama"] = calc_kama(df_all["收盘"])
         st, st_dir, st_up, st_lo = calc_supertrend(
@@ -326,13 +494,15 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         trades, final_cash, final_shares = _run_buy_and_hold(df, initial_cash)
     elif strategy_name == "supertrend_ma":
         trades, final_cash, final_shares = _run_supertrend_ma(df, initial_cash, strategy_params)
+    elif strategy_name == "supertrend_ma_v2":
+        trades, final_cash, final_shares = _run_supertrend_ma_v2(df, initial_cash, strategy_params)
     else:
         trades, final_cash, final_shares = _run_strategy(df, initial_cash, strategy_params)
 
     # Indicators for chart
     close = df["收盘"]; high = df["最高"]; low = df["最低"]; open_ = df["开盘"]
     ma5 = calc_ma(close, 5); ma20 = calc_ma(close, 20); ma60 = calc_ma(close, 60)
-    if strategy_name == "supertrend_ma":
+    if strategy_name in ("supertrend_ma", "supertrend_ma_v2"):
         st_vals, st_dir = calc_supertrend(high, low, close, period=12, multiplier=3.0)
         kama_vals = calc_kama(close)
     else:
@@ -344,6 +514,22 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     total_assets = final_shares * last_price + final_cash
     total_return = (total_assets - initial_cash) / initial_cash
     total_fees = sum(t["total_fee"] for t in trades)
+
+    # Win rate & profit-loss ratio (only for active strategies)
+    win_rate = None
+    profit_loss_ratio = None
+    if strategy_name != "buy_and_hold":
+        sell_pnls = [t["pnl"] for t in trades if t["direction"] == "卖出" and t["pnl"] is not None]
+        if sell_pnls:
+            wins = [p for p in sell_pnls if p > 0]
+            losses = [p for p in sell_pnls if p < 0]
+            win_rate = round(len(wins) / len(sell_pnls), 4)
+            avg_win = sum(wins) / len(wins) if wins else 0.0
+            avg_loss = sum(losses) / len(losses) if losses else 0.0
+            if avg_loss < 0:
+                profit_loss_ratio = round(avg_win / abs(avg_loss), 4)
+            elif avg_win > 0:
+                profit_loss_ratio = -1  # sentinel: 无亏损交易
 
     first_price = float(close.iloc[0])
     bh_shares = int(initial_cash // (first_price * 100)) * 100
@@ -379,5 +565,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
             "excess_return": round(total_return - bh_return, 4),
             "final_shares": final_shares,
             "final_cash": round(final_cash, 2),
+            "win_rate": win_rate,
+            "profit_loss_ratio": profit_loss_ratio,
         },
     }

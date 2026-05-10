@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import {
-  Form, DatePicker, InputNumber, Button, Collapse, Row, Col, Spin, Select,
+  Form, DatePicker, InputNumber, Button, Collapse, Row, Col, Spin, Select, Switch,
 } from 'antd'
 import { PlayCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -16,6 +16,7 @@ interface Props {
 const STRATEGIES = [
   { value: 'three_factors', label: '三因子策略' },
   { value: 'supertrend_ma', label: 'SuperTrend+MA' },
+  { value: 'supertrend_ma_v2', label: 'SuperTrend+MA-V2' },
   { value: 'buy_and_hold', label: '买入持有' },
 ]
 
@@ -45,6 +46,13 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         zscore_window: values.zscore_window,
       } : values.strategy_name === 'supertrend_ma' ? {
         recent_high_window: values.recent_high_window,
+      } as StrategyParams : values.strategy_name === 'supertrend_ma_v2' ? {
+        recent_high_window: values.recent_high_window,
+        enable_entry2: values.enable_entry2,
+        atr_stop_mult: values.atr_stop_mult,
+        vol_threshold: values.vol_threshold,
+        cooldown_bars: values.cooldown_bars,
+        min_hold_bars: values.min_hold_bars,
       } as StrategyParams : {} as StrategyParams,
     }
     onRun(req)
@@ -75,6 +83,11 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         efficiency_n: p.efficiency_n,
         zscore_window: p.zscore_window,
         recent_high_window: p.recent_high_window,
+        enable_entry2: p.enable_entry2,
+        atr_stop_mult: p.atr_stop_mult,
+        vol_threshold: p.vol_threshold,
+        cooldown_bars: p.cooldown_bars,
+        min_hold_bars: p.min_hold_bars,
       }}
       style={{ background: '#161b22', padding: 16, borderRadius: 8, border: '1px solid #30363d', marginBottom: 16 }}
     >
@@ -189,6 +202,77 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
                     tooltip="过去N个交易日内若出现过1年新高，则禁止产生买入信号"
                   >
                     <InputNumber min={1} max={250} style={{ width: 90 }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+            ),
+          }]}
+        />
+      )}
+
+      {strategy === 'supertrend_ma_v2' && (
+        <Collapse
+          ghost
+          defaultActiveKey={['1']}
+          style={{ width: '100%', marginTop: 8 }}
+          items={[{
+            key: '1',
+            label: <span style={{ color: '#8b949e' }}>策略参数 (V2) ▾</span>,
+            children: (
+              <Row gutter={[16, 0]}>
+                <Col>
+                  <Form.Item
+                    label="新高回看天数"
+                    name="recent_high_window"
+                    tooltip="过去N个交易日内若出现过1年新高，则禁止产生买入信号"
+                  >
+                    <InputNumber min={1} max={250} style={{ width: 90 }} />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Form.Item
+                    label="ATR止损倍数"
+                    name="atr_stop_mult"
+                    tooltip="止损价 = 入场价 − 倍数 × ATR(12)。默认1.8，数值越大止损越宽松"
+                  >
+                    <InputNumber min={0.5} max={5} step={0.1} style={{ width: 90 }} />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Form.Item
+                    label="波动率阈值"
+                    name="vol_threshold"
+                    tooltip="ATR/收盘 ≥ 此值时不开仓（过滤暴动股）。默认0.06"
+                  >
+                    <InputNumber min={0.01} max={0.30} step={0.01} style={{ width: 90 }} />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Form.Item
+                    label="冷却期 (bar)"
+                    name="cooldown_bars"
+                    tooltip="止损/止盈后N个bar内禁止重新开仓。默认5"
+                  >
+                    <InputNumber min={0} max={60} style={{ width: 90 }} />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Form.Item
+                    label="最小持仓 (bar)"
+                    name="min_hold_bars"
+                    tooltip="持仓不足N个bar时不触发KAMA止盈，避免日内噪音闪退。默认3"
+                  >
+                    <InputNumber min={0} max={60} style={{ width: 90 }} />
+                  </Form.Item>
+                </Col>
+                <Col>
+                  <Form.Item
+                    label="启用Entry-2"
+                    name="enable_entry2"
+                    valuePropName="checked"
+                    tooltip="下降趋势突破上轨信号（默认关闭，胜率低）"
+                  >
+                    <Switch />
                   </Form.Item>
                 </Col>
               </Row>

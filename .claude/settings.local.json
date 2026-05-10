@@ -6,7 +6,9 @@
       "Bash(python:*)",
       "Bash(npm run:*)",
       "Bash(curl:*)",
-      "Bash(do:*)"
+      "Bash(do:*)",
+      "Bash(netstat:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }

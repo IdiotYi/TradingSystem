@@ -14,6 +14,12 @@ export interface StrategyParams {
   zscore_window: number
   // SuperTrend+MA 参数
   recent_high_window: number
+  // SuperTrend+MA V2 参数
+  enable_entry2: boolean
+  atr_stop_mult: number
+  vol_threshold: number
+  cooldown_bars: number
+  min_hold_bars: number
 }
 
 export const DEFAULT_STRATEGY_PARAMS: StrategyParams = {
@@ -30,6 +36,11 @@ export const DEFAULT_STRATEGY_PARAMS: StrategyParams = {
   efficiency_n: 20,
   zscore_window: 60,
   recent_high_window: 25,
+  enable_entry2: false,
+  atr_stop_mult: 1.8,
+  vol_threshold: 0.06,
+  cooldown_bars: 5,
+  min_hold_bars: 3,
 }
 
 export interface Trade {
@@ -56,6 +67,8 @@ export interface BacktestSummary {
   excess_return: number
   final_shares: number
   final_cash: number
+  win_rate: number | null
+  profit_loss_ratio: number | null
 }
 
 export interface BacktestResponse {

@@ -44,3 +44,47 @@ export function computeWMAPred(
   }
   return out
 }
+
+// 指数移动平均线 (Exponential Moving Average)
+// alpha = 2 / (period + 1)
+// 种子：第一个有效 close
+export function computeEMA(
+  close: (number | null)[],
+  period: number,
+): (number | null)[] {
+  const n = close.length
+  const out: (number | null)[] = new Array(n).fill(null)
+  const alpha = 2 / (period + 1)
+  let prev: number | null = null
+  for (let i = 0; i < n; i++) {
+    const c = close[i]
+    if (c == null) { out[i] = prev; continue }
+    const cur = prev == null ? c : alpha * c + (1 - alpha) * prev
+    out[i] = cur
+    prev = cur
+  }
+  return out
+}
+// 简单移动平均线 (Simple Moving Average)
+// 不足 period 个有效值时为 null
+export function computeSMA(
+  close: (number | null)[],
+  period: number,
+): (number | null)[] {
+  const n = close.length
+  const out: (number | null)[] = new Array(n).fill(null)
+  let sum = 0
+  let count = 0
+  const buf: (number | null)[] = []
+  for (let i = 0; i < n; i++) {
+    const c = close[i]
+    buf.push(c)
+    if (c != null) { sum += c; count++ }
+    if (buf.length > period) {
+      const old = buf.shift()!
+      if (old != null) { sum -= old; count-- }
+    }
+    out[i] = buf.length === period && count === period ? sum / period : null
+  }
+  return out
+}

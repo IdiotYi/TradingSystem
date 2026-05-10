@@ -21,6 +21,12 @@ class StrategyParams(BaseModel):
     zscore_window: int = 60
     # SuperTrend+MA 参数
     recent_high_window: int = 25
+    # SuperTrend+MA V2 参数
+    enable_entry2: bool = False
+    atr_stop_mult: float = 1.8
+    vol_threshold: float = 0.06
+    cooldown_bars: int = 5
+    min_hold_bars: int = 3
 
 
 class BacktestRequest(BaseModel):
