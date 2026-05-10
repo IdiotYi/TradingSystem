@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { AnalysisResponse } from '../../types/stock'
 import { detectPriceDecimals } from '../../utils/priceFormat'
-import { computeWMA, computeWMAPred } from '../../utils/wma'
+import { computeWMA, computeWMAPred, computeSMA, computeEMA } from '../../utils/wma'
 
 interface Props {
   data: AnalysisResponse
@@ -19,6 +19,14 @@ const WMAChart: React.FC<Props> = ({ data }) => {
     const pred5Full  = computeWMAPred(data.open, wma5Full)
     const pred20Full = computeWMAPred(data.open, wma20Full)
     const pred60Full = computeWMAPred(data.open, wma60Full)
+    const ma7Full   = computeSMA(data.close, 7)
+    const ma23Full  = computeSMA(data.close, 23)
+    const ma67Full  = computeSMA(data.close, 67)
+    const ma133Full = computeSMA(data.close, 133)
+    const ema7Full   = computeEMA(data.close, 7)
+    const ema23Full  = computeEMA(data.close, 23)
+    const ema67Full  = computeEMA(data.close, 67)
+    const ema133Full = computeEMA(data.close, 133)
 
     const n = data.dates.length
     const start = Math.max(0, n - TAIL)
@@ -34,6 +42,14 @@ const WMAChart: React.FC<Props> = ({ data }) => {
     const pred5  = pred5Full.slice(start)
     const pred20 = pred20Full.slice(start)
     const pred60 = pred60Full.slice(start)
+    const ma7    = ma7Full.slice(start)
+    const ma23   = ma23Full.slice(start)
+    const ma67   = ma67Full.slice(start)
+    const ma133  = ma133Full.slice(start)
+    const ema7   = ema7Full.slice(start)
+    const ema23  = ema23Full.slice(start)
+    const ema67  = ema67Full.slice(start)
+    const ema133 = ema133Full.slice(start)
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
@@ -50,7 +66,7 @@ const WMAChart: React.FC<Props> = ({ data }) => {
       animation: false,
       axisPointer: { link: [{ xAxisIndex: 'all' }] },
       legend: {
-        data: ['K线', 'WMA5', 'WMA20', 'WMA60', 'WMAPred5', 'WMAPred20', 'WMAPred60'],
+        data: ['K线', 'WMA5', 'WMA20', 'WMA60', 'WMAPred5', 'WMAPred20', 'WMAPred60', 'MA7', 'MA23', 'MA67', 'MA133', 'EMA7', 'EMA23', 'EMA67', 'EMA133'],
         top: 8,
         textStyle: { color: '#8b949e' },
         inactiveColor: '#444',
@@ -149,6 +165,22 @@ const WMAChart: React.FC<Props> = ({ data }) => {
           lineStyle: { color: '#ffd700', width: 1, type: 'dashed' }, showSymbol: false },
         { name: 'WMAPred60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred60,
           lineStyle: { color: '#1890ff', width: 1, type: 'dashed' }, showSymbol: false },
+        { name: 'MA7',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma7,
+          lineStyle: { color: '#ff7f50', width: 1 }, showSymbol: false },
+        { name: 'MA23', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma23,
+          lineStyle: { color: '#7cb342', width: 1 }, showSymbol: false },
+        { name: 'MA67', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma67,
+          lineStyle: { color: '#b57bee', width: 1 }, showSymbol: false },
+        { name: 'MA133', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma133,
+          lineStyle: { color: '#00bcd4', width: 1 }, showSymbol: false },
+        { name: 'EMA7',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema7,
+          lineStyle: { color: '#ff7f50', width: 1, type: 'dotted' }, showSymbol: false },
+        { name: 'EMA23', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema23,
+          lineStyle: { color: '#7cb342', width: 1, type: 'dotted' }, showSymbol: false },
+        { name: 'EMA67', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema67,
+          lineStyle: { color: '#b57bee', width: 1, type: 'dotted' }, showSymbol: false },
+        { name: 'EMA133', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema133,
+          lineStyle: { color: '#00bcd4', width: 1, type: 'dotted' }, showSymbol: false },
         {
           name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1,
           data: volData,

@@ -15,7 +15,7 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
       score, score_mean, score_std, trades, strategy_name,
     } = data
 
-    const isSTMA = strategy_name === 'supertrend_ma'
+    const isSTMA = strategy_name === 'supertrend_ma' || strategy_name === 'supertrend_ma_v2'
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
