@@ -18,6 +18,39 @@ def get_analysis_data(stock_code: str) -> dict:
     volume = df["成交量"]
     dates = df["日期"]
 
+    # Turnover-weighted MA of daily VWAP (avg trade price = 成交额 / 成交量, adjusted by qfq factor)
+    if "成交额" in df.columns and "换手率" in df.columns:
+        amount = pd.to_numeric(df["成交额"], errors="coerce")
+        turnover = pd.to_numeric(df["换手率"], errors="coerce")
+        vol_num = pd.to_numeric(volume, errors="coerce")
+        vwap_raw = amount / vol_num.where(vol_num > 0)
+
+        # Apply qfq adjustment factor when raw close is available; amount/volume are
+        # unadjusted, but close is qfq-adjusted, so factor = close / close_raw.
+        if "收盘_未复权" in df.columns:
+            close_raw = pd.to_numeric(df["收盘_未复权"], errors="coerce")
+            factor = close / close_raw.where(close_raw > 0)
+            vwap = vwap_raw * factor
+        else:
+            vwap = vwap_raw
+
+        weighted = (vwap * turnover).where(turnover.notna() & vwap.notna())
+
+        def _maw(n: int) -> pd.Series:
+            num = weighted.rolling(window=n, min_periods=n).sum()
+            den = turnover.where(vwap.notna()).rolling(window=n, min_periods=n).sum()
+            return num / den.where(den > 0)
+
+        maw5   = _maw(5)
+        maw10  = _maw(10)
+        maw20  = _maw(20)
+        maw60  = _maw(60)
+        maw120 = _maw(120)
+    else:
+        nan_series = pd.Series([np.nan] * len(df))
+        vwap = nan_series
+        maw5 = maw10 = maw20 = maw60 = maw120 = nan_series
+
     ma5 = calc_ma(close, 5)
     ma20 = calc_ma(close, 20)
     ma60 = calc_ma(close, 60)
@@ -50,6 +83,12 @@ def get_analysis_data(stock_code: str) -> dict:
         "ma5": _to_list(ma5),
         "ma20": _to_list(ma20),
         "ma60": _to_list(ma60),
+        "maw5": _to_list(maw5),
+        "maw10": _to_list(maw10),
+        "maw20": _to_list(maw20),
+        "maw60": _to_list(maw60),
+        "maw120": _to_list(maw120),
+        "vwap": _to_list(vwap),
         "kama": _to_list(kama),
         "supertrend": _to_list(supertrend),
         "supertrend_direction": [None if pd.isna(v) else int(v) for v in direction],

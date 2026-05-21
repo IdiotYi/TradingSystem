@@ -1,5 +1,5 @@
 import React from 'react'
-import { Spin, Empty, Typography } from 'antd'
+import { Spin, Empty } from 'antd'
 import type { AnalysisResponse } from '../../types/stock'
 import WMAChart from './WMAChart'
 
@@ -28,9 +28,6 @@ const IndicatorTestTab: React.FC<Props> = ({ data, loading }) => {
 
   return (
     <div>
-      <Typography.Title level={5} style={{ color: '#8b949e', marginBottom: 12 }}>
-        {data.stock_code} · 韦氏移动平均线 WMA(5/20/60) · 最近 250 个交易日
-      </Typography.Title>
       <WMAChart data={data} />
     </div>
   )

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import {
-  Form, DatePicker, InputNumber, Button, Collapse, Row, Col, Spin, Select, Switch,
+  Form, DatePicker, InputNumber, Button, Collapse, Row, Col, Spin, Select,
 } from 'antd'
 import { PlayCircleOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
@@ -16,7 +16,7 @@ interface Props {
 const STRATEGIES = [
   { value: 'three_factors', label: '三因子策略' },
   { value: 'supertrend_ma', label: 'SuperTrend+MA' },
-  { value: 'supertrend_ma_v2', label: 'SuperTrend+MA-V2' },
+  { value: 'supertrend_wma', label: 'SuperTrend+WMA' },
   { value: 'buy_and_hold', label: '买入持有' },
 ]
 
@@ -25,34 +25,32 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
   const [strategy, setStrategy] = useState('three_factors')
 
   const handleFinish = (values: any) => {
+    const p = DEFAULT_STRATEGY_PARAMS
+    const num = (v: any, fallback: number) =>
+      v === null || v === undefined || Number.isNaN(v) ? fallback : Number(v)
+    const pct = (v: any, fallbackPct: number) =>
+      num(v, fallbackPct * 100) / 100
     const req: BacktestRequest = {
       stock_code: stockCode,
       start_date: values.start_date.format('YYYY-MM-DD'),
       end_date: values.end_date.format('YYYY-MM-DD'),
-      initial_cash: values.initial_cash,
+      initial_cash: num(values.initial_cash, 100000),
       strategy_name: values.strategy_name,
       strategy_params: values.strategy_name === 'three_factors' ? {
-        score_rising_days: values.score_rising_days,
-        oversold_std_mult: values.oversold_std_mult,
-        take_profit_pct: values.take_profit_pct / 100,
-        take_profit_std_mult: values.take_profit_std_mult,
-        stop_loss_pct: values.stop_loss_pct / 100,
-        add_position_pct: values.add_position_pct / 100,
-        half_position_ratio: values.half_position_ratio / 100,
-        bias_n: values.bias_n,
-        momentum_day: values.momentum_day,
-        slope_n: values.slope_n,
-        efficiency_n: values.efficiency_n,
-        zscore_window: values.zscore_window,
-      } : values.strategy_name === 'supertrend_ma' ? {
-        recent_high_window: values.recent_high_window,
-      } as StrategyParams : values.strategy_name === 'supertrend_ma_v2' ? {
-        recent_high_window: values.recent_high_window,
-        enable_entry2: values.enable_entry2,
-        atr_stop_mult: values.atr_stop_mult,
-        vol_threshold: values.vol_threshold,
-        cooldown_bars: values.cooldown_bars,
-        min_hold_bars: values.min_hold_bars,
+        score_rising_days: num(values.score_rising_days, p.score_rising_days),
+        oversold_std_mult: num(values.oversold_std_mult, p.oversold_std_mult),
+        take_profit_pct: pct(values.take_profit_pct, p.take_profit_pct),
+        take_profit_std_mult: num(values.take_profit_std_mult, p.take_profit_std_mult),
+        stop_loss_pct: pct(values.stop_loss_pct, p.stop_loss_pct),
+        add_position_pct: pct(values.add_position_pct, p.add_position_pct),
+        half_position_ratio: pct(values.half_position_ratio, p.half_position_ratio),
+        bias_n: num(values.bias_n, p.bias_n),
+        momentum_day: num(values.momentum_day, p.momentum_day),
+        slope_n: num(values.slope_n, p.slope_n),
+        efficiency_n: num(values.efficiency_n, p.efficiency_n),
+        zscore_window: num(values.zscore_window, p.zscore_window),
+      } : values.strategy_name === 'supertrend_ma' || values.strategy_name === 'supertrend_wma' ? {
+        recent_high_window: num(values.recent_high_window, p.recent_high_window),
       } as StrategyParams : {} as StrategyParams,
     }
     onRun(req)
@@ -83,11 +81,6 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         efficiency_n: p.efficiency_n,
         zscore_window: p.zscore_window,
         recent_high_window: p.recent_high_window,
-        enable_entry2: p.enable_entry2,
-        atr_stop_mult: p.atr_stop_mult,
-        vol_threshold: p.vol_threshold,
-        cooldown_bars: p.cooldown_bars,
-        min_hold_bars: p.min_hold_bars,
       }}
       style={{ background: '#161b22', padding: 16, borderRadius: 8, border: '1px solid #30363d', marginBottom: 16 }}
     >
@@ -186,7 +179,7 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         />
       )}
 
-      {strategy === 'supertrend_ma' && (
+      {(strategy === 'supertrend_ma' || strategy === 'supertrend_wma') && (
         <Collapse
           ghost
           style={{ width: '100%', marginTop: 8 }}
@@ -202,77 +195,6 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
                     tooltip="过去N个交易日内若出现过1年新高，则禁止产生买入信号"
                   >
                     <InputNumber min={1} max={250} style={{ width: 90 }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-            ),
-          }]}
-        />
-      )}
-
-      {strategy === 'supertrend_ma_v2' && (
-        <Collapse
-          ghost
-          defaultActiveKey={['1']}
-          style={{ width: '100%', marginTop: 8 }}
-          items={[{
-            key: '1',
-            label: <span style={{ color: '#8b949e' }}>策略参数 (V2) ▾</span>,
-            children: (
-              <Row gutter={[16, 0]}>
-                <Col>
-                  <Form.Item
-                    label="新高回看天数"
-                    name="recent_high_window"
-                    tooltip="过去N个交易日内若出现过1年新高，则禁止产生买入信号"
-                  >
-                    <InputNumber min={1} max={250} style={{ width: 90 }} />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Form.Item
-                    label="ATR止损倍数"
-                    name="atr_stop_mult"
-                    tooltip="止损价 = 入场价 − 倍数 × ATR(12)。默认1.8，数值越大止损越宽松"
-                  >
-                    <InputNumber min={0.5} max={5} step={0.1} style={{ width: 90 }} />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Form.Item
-                    label="波动率阈值"
-                    name="vol_threshold"
-                    tooltip="ATR/收盘 ≥ 此值时不开仓（过滤暴动股）。默认0.06"
-                  >
-                    <InputNumber min={0.01} max={0.30} step={0.01} style={{ width: 90 }} />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Form.Item
-                    label="冷却期 (bar)"
-                    name="cooldown_bars"
-                    tooltip="止损/止盈后N个bar内禁止重新开仓。默认5"
-                  >
-                    <InputNumber min={0} max={60} style={{ width: 90 }} />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Form.Item
-                    label="最小持仓 (bar)"
-                    name="min_hold_bars"
-                    tooltip="持仓不足N个bar时不触发KAMA止盈，避免日内噪音闪退。默认3"
-                  >
-                    <InputNumber min={0} max={60} style={{ width: 90 }} />
-                  </Form.Item>
-                </Col>
-                <Col>
-                  <Form.Item
-                    label="启用Entry-2"
-                    name="enable_entry2"
-                    valuePropName="checked"
-                    tooltip="下降趋势突破上轨信号（默认关闭，胜率低）"
-                  >
-                    <Switch />
                   </Form.Item>
                 </Col>
               </Row>

@@ -36,11 +36,21 @@ def _download(code: str, csv_path: Path) -> None:
         sym = _exchange_prefix(code)
         df = ak.stock_zh_a_daily(symbol=sym, adjust="qfq")
         if df is not None and not df.empty:
+            # Also fetch raw close to compute adjustment factor for amount-based VWAP
+            try:
+                df_raw = ak.stock_zh_a_daily(symbol=sym)
+                if df_raw is not None and not df_raw.empty:
+                    df = df.merge(
+                        df_raw[["date", "close"]].rename(columns={"close": "close_raw"}),
+                        on="date", how="left",
+                    )
+            except Exception:
+                pass
             df.rename(columns={
                 "date": "日期", "open": "开盘", "high": "最高",
                 "low": "最低", "close": "收盘", "volume": "成交量",
                 "amount": "成交额", "outstanding_share": "流通股本",
-                "turnover": "换手率",
+                "turnover": "换手率", "close_raw": "收盘_未复权",
             }, inplace=True)
             df.insert(1, "股票代码", code)
         else:

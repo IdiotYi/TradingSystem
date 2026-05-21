@@ -8,6 +8,36 @@ def calc_ma(close: pd.Series, period: int) -> pd.Series:
     return close.rolling(window=period).mean()
 
 
+def calc_maw(df: pd.DataFrame, period: int) -> pd.Series:
+    """
+    Turnover-weighted MA of daily VWAP, with qfq adjustment.
+    每日 VWAP = 成交额 / 成交量；若有「收盘_未复权」列则乘以 factor = 收盘 / 收盘_未复权
+    将其调整到前复权口径；窗口内以「换手率」为权重做加权平均。
+    df 必须包含「收盘」「成交量」「成交额」「换手率」四列；可选「收盘_未复权」。
+    """
+    n = len(df)
+    if not {"成交额", "换手率", "成交量", "收盘"}.issubset(df.columns):
+        return pd.Series([np.nan] * n, index=df.index)
+
+    amount = pd.to_numeric(df["成交额"], errors="coerce")
+    turnover = pd.to_numeric(df["换手率"], errors="coerce")
+    vol = pd.to_numeric(df["成交量"], errors="coerce")
+    close = pd.to_numeric(df["收盘"], errors="coerce")
+    vwap_raw = amount / vol.where(vol > 0)
+
+    if "收盘_未复权" in df.columns:
+        close_raw = pd.to_numeric(df["收盘_未复权"], errors="coerce")
+        factor = close / close_raw.where(close_raw > 0)
+        vwap = vwap_raw * factor
+    else:
+        vwap = vwap_raw
+
+    weighted = (vwap * turnover).where(turnover.notna() & vwap.notna())
+    num = weighted.rolling(window=period, min_periods=period).sum()
+    den = turnover.where(vwap.notna()).rolling(window=period, min_periods=period).sum()
+    return num / den.where(den > 0)
+
+
 def calc_kama(close: pd.Series, period: int = 10, fast: int = 2, slow: int = 30) -> pd.Series:
     """
     Kaufman Adaptive Moving Average (KAMA).
