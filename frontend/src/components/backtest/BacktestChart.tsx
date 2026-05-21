@@ -11,11 +11,13 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
   const option = useMemo(() => {
     const {
       dates, open, high, low, close,
-      ma5, ma20, ma60, kama, supertrend, supertrend_direction,
+      ma5, ma20, ma60, maw20, kama, supertrend, supertrend_direction,
       score, score_mean, score_std, trades, strategy_name,
     } = data
 
-    const isSTMA = strategy_name === 'supertrend_ma' || strategy_name === 'supertrend_ma_v2'
+    const isSTMA = strategy_name === 'supertrend_ma'
+    const isSTWMA = strategy_name === 'supertrend_wma'
+    const isSTLike = isSTMA || isSTWMA
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
@@ -63,8 +65,8 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
       })
       .filter((x): x is NonNullable<typeof x> => x !== null)
 
-    const legendData = isSTMA
-      ? ['K线', 'MA20', 'KAMA', 'ST(12,3)↑', 'ST(12,3)↓']
+    const legendData = isSTLike
+      ? ['K线', isSTWMA ? 'MAW20' : 'MA20', 'KAMA', 'ST(12,3)↑', 'ST(12,3)↓']
       : ['K线', 'MA5', 'MA20', 'MA60', 'ST↑', 'ST↓', 'Score', 'Mean', '+2σ', '-2σ']
 
     const series: any[] = [
@@ -79,9 +81,10 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
       },
     ]
 
-    if (isSTMA) {
+    if (isSTLike) {
       series.push(
-        { name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma20,
+        { name: isSTWMA ? 'MAW20' : 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
+          data: isSTWMA ? maw20 : ma20,
           lineStyle: { color: '#ffd700', width: 1 }, showSymbol: false },
         { name: 'KAMA', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: kama,
           lineStyle: { color: '#b57bee', width: 1.5 }, showSymbol: false },
@@ -113,14 +116,14 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
       )
     }
 
-    const grid = isSTMA
+    const grid = isSTLike
       ? [{ left: '5%', right: '3%', top: 60, bottom: 80 }]
       : [
           { left: '5%', right: '3%', top: 60, bottom: '42%' },
           { left: '5%', right: '3%', top: '62%', bottom: 80 },
         ]
 
-    const xAxis = isSTMA
+    const xAxis = isSTLike
       ? [{
           type: 'category', data: dates, gridIndex: 0, boundaryGap: true,
           axisLabel: {
@@ -147,7 +150,7 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
           },
         ]
 
-    const yAxis = isSTMA
+    const yAxis = isSTLike
       ? [{
           scale: true, gridIndex: 0,
           axisLabel: { color: '#8b949e', formatter: (v: number) => v.toFixed(priceDecimals) },
@@ -166,7 +169,7 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
           },
         ]
 
-    const dataZoom = isSTMA
+    const dataZoom = isSTLike
       ? [
           { type: 'inside', xAxisIndex: 0, start: 0, end: 100 },
           {

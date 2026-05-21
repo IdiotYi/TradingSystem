@@ -2,31 +2,20 @@ import React, { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { AnalysisResponse } from '../../types/stock'
 import { detectPriceDecimals } from '../../utils/priceFormat'
-import { computeWMA, computeWMAPred, computeSMA, computeEMA } from '../../utils/wma'
+import { computeSMA } from '../../utils/wma'
 
 interface Props {
   data: AnalysisResponse
 }
 
-const TAIL = 250
+const TAIL = 2500
 
 const WMAChart: React.FC<Props> = ({ data }) => {
   const option = useMemo(() => {
-    // Compute WMA on full history (recurrence needs full past), then slice last TAIL bars for display
-    const wma5Full  = computeWMA(data.open, data.close, 5)
-    const wma20Full = computeWMA(data.open, data.close, 20)
-    const wma60Full = computeWMA(data.open, data.close, 60)
-    const pred5Full  = computeWMAPred(data.open, wma5Full)
-    const pred20Full = computeWMAPred(data.open, wma20Full)
-    const pred60Full = computeWMAPred(data.open, wma60Full)
     const ma7Full   = computeSMA(data.close, 7)
     const ma23Full  = computeSMA(data.close, 23)
     const ma67Full  = computeSMA(data.close, 67)
     const ma133Full = computeSMA(data.close, 133)
-    const ema7Full   = computeEMA(data.close, 7)
-    const ema23Full  = computeEMA(data.close, 23)
-    const ema67Full  = computeEMA(data.close, 67)
-    const ema133Full = computeEMA(data.close, 133)
 
     const n = data.dates.length
     const start = Math.max(0, n - TAIL)
@@ -36,20 +25,17 @@ const WMAChart: React.FC<Props> = ({ data }) => {
     const low    = data.low.slice(start)
     const close  = data.close.slice(start)
     const volume = data.volume.slice(start)
-    const wma5   = wma5Full.slice(start)
-    const wma20  = wma20Full.slice(start)
-    const wma60  = wma60Full.slice(start)
-    const pred5  = pred5Full.slice(start)
-    const pred20 = pred20Full.slice(start)
-    const pred60 = pred60Full.slice(start)
     const ma7    = ma7Full.slice(start)
     const ma23   = ma23Full.slice(start)
     const ma67   = ma67Full.slice(start)
     const ma133  = ma133Full.slice(start)
-    const ema7   = ema7Full.slice(start)
-    const ema23  = ema23Full.slice(start)
-    const ema67  = ema67Full.slice(start)
-    const ema133 = ema133Full.slice(start)
+    const nullArr = new Array(n - start).fill(null) as (number | null)[]
+    const maw5   = data.maw5   ? data.maw5.slice(start)   : nullArr
+    const maw10  = data.maw10  ? data.maw10.slice(start)  : nullArr
+    const maw20  = data.maw20  ? data.maw20.slice(start)  : nullArr
+    const maw60  = data.maw60  ? data.maw60.slice(start)  : nullArr
+    const maw120 = data.maw120 ? data.maw120.slice(start) : nullArr
+    const vwap   = data.vwap   ? data.vwap.slice(start)   : nullArr
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
@@ -66,7 +52,7 @@ const WMAChart: React.FC<Props> = ({ data }) => {
       animation: false,
       axisPointer: { link: [{ xAxisIndex: 'all' }] },
       legend: {
-        data: ['K线', 'WMA5', 'WMA20', 'WMA60', 'WMAPred5', 'WMAPred20', 'WMAPred60', 'MA7', 'MA23', 'MA67', 'MA133', 'EMA7', 'EMA23', 'EMA67', 'EMA133'],
+        data: ['K线', '均价', 'MA7', 'MA23', 'MA67', 'MA133', 'MAW5', 'MAW10', 'MAW20', 'MAW60', 'MAW120'],
         top: 8,
         textStyle: { color: '#8b949e' },
         inactiveColor: '#444',
@@ -153,18 +139,8 @@ const WMAChart: React.FC<Props> = ({ data }) => {
             borderColor: '#ef5350', borderColor0: '#26a69a',
           },
         },
-        { name: 'WMA5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: wma5,
-          lineStyle: { color: '#ffffff', width: 1 }, showSymbol: false },
-        { name: 'WMA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: wma20,
-          lineStyle: { color: '#ffd700', width: 1 }, showSymbol: false },
-        { name: 'WMA60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: wma60,
-          lineStyle: { color: '#1890ff', width: 1 }, showSymbol: false },
-        { name: 'WMAPred5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred5,
-          lineStyle: { color: '#ffffff', width: 1, type: 'dashed' }, showSymbol: false },
-        { name: 'WMAPred20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred20,
-          lineStyle: { color: '#ffd700', width: 1, type: 'dashed' }, showSymbol: false },
-        { name: 'WMAPred60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: pred60,
-          lineStyle: { color: '#1890ff', width: 1, type: 'dashed' }, showSymbol: false },
+        { name: '均价', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: vwap,
+          lineStyle: { color: '#fa8c16', width: 1 }, showSymbol: false },
         { name: 'MA7',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma7,
           lineStyle: { color: '#ff7f50', width: 1 }, showSymbol: false },
         { name: 'MA23', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma23,
@@ -173,14 +149,16 @@ const WMAChart: React.FC<Props> = ({ data }) => {
           lineStyle: { color: '#b57bee', width: 1 }, showSymbol: false },
         { name: 'MA133', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma133,
           lineStyle: { color: '#00bcd4', width: 1 }, showSymbol: false },
-        { name: 'EMA7',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema7,
-          lineStyle: { color: '#ff7f50', width: 1, type: 'dotted' }, showSymbol: false },
-        { name: 'EMA23', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema23,
-          lineStyle: { color: '#7cb342', width: 1, type: 'dotted' }, showSymbol: false },
-        { name: 'EMA67', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema67,
-          lineStyle: { color: '#b57bee', width: 1, type: 'dotted' }, showSymbol: false },
-        { name: 'EMA133', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ema133,
-          lineStyle: { color: '#00bcd4', width: 1, type: 'dotted' }, showSymbol: false },
+        { name: 'MAW5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw5,
+          lineStyle: { color: '#ffffff', width: 1.2, type: 'dashed' }, showSymbol: false },
+        { name: 'MAW10', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw10,
+          lineStyle: { color: '#ffd700', width: 1.2, type: 'dashed' }, showSymbol: false },
+        { name: 'MAW20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw20,
+          lineStyle: { color: '#ef5350', width: 1.2, type: 'dashed' }, showSymbol: false },
+        { name: 'MAW60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw60,
+          lineStyle: { color: '#1890ff', width: 1.2, type: 'dashed' }, showSymbol: false },
+        { name: 'MAW120', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw120,
+          lineStyle: { color: '#26a69a', width: 1.2, type: 'dashed' }, showSymbol: false },
         {
           name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1,
           data: volData,

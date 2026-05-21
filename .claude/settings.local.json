@@ -8,7 +8,9 @@
       "Bash(curl:*)",
       "Bash(do:*)",
       "Bash(netstat:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(rm:*)",
+      "Bash(powershell:*)"
     ]
   }
 }
