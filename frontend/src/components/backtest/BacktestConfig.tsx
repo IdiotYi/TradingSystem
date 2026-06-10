@@ -15,6 +15,7 @@ interface Props {
 
 const STRATEGIES = [
   { value: 'three_factors', label: '三因子策略' },
+  { value: 'three_factors_v2', label: '三因子v2' },
   { value: 'supertrend_ma', label: 'SuperTrend+MA' },
   { value: 'supertrend_wma', label: 'SuperTrend+WMA' },
   { value: 'buy_and_hold', label: '买入持有' },
@@ -36,7 +37,7 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
       end_date: values.end_date.format('YYYY-MM-DD'),
       initial_cash: num(values.initial_cash, 100000),
       strategy_name: values.strategy_name,
-      strategy_params: values.strategy_name === 'three_factors' ? {
+      strategy_params: values.strategy_name === 'three_factors' || values.strategy_name === 'three_factors_v2' ? {
         score_rising_days: num(values.score_rising_days, p.score_rising_days),
         oversold_std_mult: num(values.oversold_std_mult, p.oversold_std_mult),
         take_profit_pct: pct(values.take_profit_pct, p.take_profit_pct),
@@ -101,7 +102,7 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         <InputNumber min={10000} step={10000} style={{ width: 130 }} />
       </Form.Item>
 
-      {strategy === 'three_factors' && (
+      {(strategy === 'three_factors' || strategy === 'three_factors_v2') && (
         <Collapse
           ghost
           style={{ width: '100%', marginTop: 8 }}

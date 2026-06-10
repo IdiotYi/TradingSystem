@@ -5,6 +5,7 @@ Ported directly from C:/PrivateProjects/TradingStrategy/analysis.py.
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
+from app.core.indicators import calc_maw
 
 BIAS_N = 20          # 乖离率计算窗口：收盘价相对移动均线偏离度的均线周期（交易日）
 MOMENTUM_DAY = 20    # 乖离动量回看窗口：对乖离率序列做线性拟合时使用的历史天数
@@ -22,6 +23,29 @@ def _bias_momentum(close: pd.Series, bias_n: int, momentum_day: int) -> float:
     bias_recent = bias.iloc[-momentum_day:]
     base = bias_recent.iloc[0]
     if base == 0:
+        return np.nan
+    x = np.arange(momentum_day).reshape(-1, 1)
+    y = (bias_recent / base).values.reshape(-1, 1)
+    lr = LinearRegression()
+    lr.fit(x, y)
+    return float(lr.coef_[0, 0]) * 10000
+
+
+def _bias_momentum_maw(df_window: pd.DataFrame, bias_n: int, momentum_day: int) -> float:
+    """与 _bias_momentum 一致，但乖离率 = 收盘 / MAW(N) 而非 / MA(N)。
+    df_window 需包含 calc_maw 所需的列（收盘/成交量/成交额/换手率，可选收盘_未复权）。"""
+    if df_window.empty:
+        return np.nan
+    close = df_window["收盘"]
+    maw = calc_maw(df_window, bias_n)
+    bias = close / maw
+    if len(bias) < momentum_day:
+        return np.nan
+    bias_recent = bias.iloc[-momentum_day:]
+    if bias_recent.isna().any():
+        return np.nan
+    base = bias_recent.iloc[0]
+    if base == 0 or pd.isna(base):
         return np.nan
     x = np.arange(momentum_day).reshape(-1, 1)
     y = (bias_recent / base).values.reshape(-1, 1)
@@ -61,28 +85,15 @@ def _efficiency_momentum(df_window: pd.DataFrame, efficiency_n: int) -> float:
     return momentum * efficiency_ratio
 
 
-def compute_three_factors(
+def _compute(
     df_all: pd.DataFrame,
-    bias_n: int = BIAS_N,
-    momentum_day: int = MOMENTUM_DAY,
-    slope_n: int = SLOPE_N,
-    efficiency_n: int = EFFICIENCY_N,
-    zscore_window: int = ZSCORE_WINDOW,
+    bias_n: int,
+    momentum_day: int,
+    slope_n: int,
+    efficiency_n: int,
+    zscore_window: int,
+    use_maw: bool,
 ) -> pd.DataFrame:
-    """
-    Compute three-factor scores on full historical data with no lookahead.
-
-    Args:
-        df_all: DataFrame with columns 日期, 开盘, 最高, 最低, 收盘
-        bias_n: 乖离率均线周期
-        momentum_day: 乖离动量回看天数
-        slope_n: 斜率动量回看天数
-        efficiency_n: 效率动量回看天数
-        zscore_window: Z-score 滚动窗口大小
-
-    Returns:
-        DataFrame with columns: 日期, score, score_mean, score_std
-    """
     df_ohlc = df_all.rename(columns={
         "开盘": "open", "最高": "high", "最低": "low", "收盘": "close",
     })
@@ -94,9 +105,13 @@ def compute_three_factors(
     for i in range(min_history, len(df_all)):
         close_slice = close_full.iloc[: i + 1]
         ohlc_slice = df_ohlc.iloc[: i + 1]
+        if use_maw:
+            bias_val = _bias_momentum_maw(df_all.iloc[: i + 1], bias_n, momentum_day)
+        else:
+            bias_val = _bias_momentum(close_slice, bias_n, momentum_day)
         results.append({
             "日期": dates_full.iloc[i],
-            "乖离动量": _bias_momentum(close_slice, bias_n, momentum_day),
+            "乖离动量": bias_val,
             "斜率动量": _slope_momentum(close_slice, slope_n),
             "效率动量": _efficiency_momentum(ohlc_slice, efficiency_n),
         })
@@ -112,3 +127,27 @@ def compute_three_factors(
     fdf["score_std"] = fdf["score"].expanding().std().shift(1)
 
     return fdf[["日期", "score", "score_mean", "score_std"]]
+
+
+def compute_three_factors(
+    df_all: pd.DataFrame,
+    bias_n: int = BIAS_N,
+    momentum_day: int = MOMENTUM_DAY,
+    slope_n: int = SLOPE_N,
+    efficiency_n: int = EFFICIENCY_N,
+    zscore_window: int = ZSCORE_WINDOW,
+) -> pd.DataFrame:
+    """Three-factor score with bias computed against MA(bias_n)."""
+    return _compute(df_all, bias_n, momentum_day, slope_n, efficiency_n, zscore_window, use_maw=False)
+
+
+def compute_three_factors_v2(
+    df_all: pd.DataFrame,
+    bias_n: int = BIAS_N,
+    momentum_day: int = MOMENTUM_DAY,
+    slope_n: int = SLOPE_N,
+    efficiency_n: int = EFFICIENCY_N,
+    zscore_window: int = ZSCORE_WINDOW,
+) -> pd.DataFrame:
+    """Three-factor score with bias computed against MAW(bias_n) — 偏离成本线."""
+    return _compute(df_all, bias_n, momentum_day, slope_n, efficiency_n, zscore_window, use_maw=True)
