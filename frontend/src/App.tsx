@@ -5,6 +5,7 @@ import Header from './components/layout/Header'
 import TechnicalTab from './components/technical/TechnicalTab'
 import BacktestTab from './components/backtest/BacktestTab'
 import IndicatorTestTab from './components/indicator-test/IndicatorTestTab'
+import ChanTab from './components/chan/ChanTab'
 import { runAnalysis } from './services/api'
 import type { AnalysisResponse } from './types/stock'
 
@@ -56,6 +57,16 @@ const App: React.FC = () => {
           <IndicatorTestTab data={analysisData} loading={loading} />
         </div>
       ),
+    },
+    {
+      key: 'chan',
+      label: '缠论',
+      children: (
+        <div className="tab-pane-inner">
+          <ChanTab stockCode={stockCode} />
+        </div>
+      ),
+      disabled: !stockCode,
     },
   ]
 
