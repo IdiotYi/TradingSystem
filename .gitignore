@@ -24,3 +24,6 @@ Thumbs.db
 # Frontend
 node_modules/
 frontend/dist/
+
+# Isolated feature worktrees
+.worktrees/
