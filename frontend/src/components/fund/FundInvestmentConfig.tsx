@@ -107,9 +107,18 @@ const FundInvestmentConfig: React.FC<Props> = ({ fundCode, analysis, onRun, load
       <Form.Item
         label="每次金额 (元)"
         name="amount"
-        rules={[{ required: true, message: '请输入定投金额' }]}
+        rules={[
+          { required: true, message: '请输入定投金额' },
+          { type: 'number', min: 0.01, message: '定投金额必须大于 0 元' },
+        ]}
       >
-        <InputNumber min={100} step={100} precision={2} style={{ width: 140 }} disabled={loading} />
+        <InputNumber
+          min={0.01}
+          step={0.01}
+          precision={2}
+          style={{ width: 140 }}
+          disabled={loading}
+        />
       </Form.Item>
       <Form.Item>
         <Button

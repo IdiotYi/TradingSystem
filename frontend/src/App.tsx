@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { ConfigProvider, Tabs, theme, message } from 'antd'
 import './App.css'
 import Header from './components/layout/Header'
@@ -13,6 +13,7 @@ import type { FundAnalysisResponse } from './types/fund'
 
 const FUND_TAB_KEY = 'fund-investment'
 const TECHNICAL_TAB_KEY = 'technical'
+type AssetMode = 'stock' | 'fund'
 
 function getErrorMessage(err: any, fallback: string) {
   const detail = err?.response?.data?.detail
@@ -35,7 +36,24 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState(TECHNICAL_TAB_KEY)
+  const latestStockActionRef = useRef(0)
+  const latestFundActionRef = useRef(0)
+  const latestAnalyseRequestRef = useRef(0)
+  const latestRefreshRequestRef = useRef(0)
   const isFundMode = activeTab === FUND_TAB_KEY
+
+  const beginAssetAction = (mode: AssetMode) => {
+    if (mode === 'fund') {
+      latestFundActionRef.current += 1
+      return latestFundActionRef.current
+    }
+
+    latestStockActionRef.current += 1
+    return latestStockActionRef.current
+  }
+
+  const isLatestAssetAction = (mode: AssetMode, actionId: number) =>
+    (mode === 'fund' ? latestFundActionRef.current : latestStockActionRef.current) === actionId
 
   const handleValueChange = (value: string) => {
     if (isFundMode) {
@@ -46,58 +64,96 @@ const App: React.FC = () => {
   }
 
   const handleAnalyse = async () => {
-    const code = (isFundMode ? fundInput : stockInput).trim()
+    const mode: AssetMode = isFundMode ? 'fund' : 'stock'
+    const code = (mode === 'fund' ? fundInput : stockInput).trim()
+    const actionId = beginAssetAction(mode)
+    const analyseRequestId = latestAnalyseRequestRef.current + 1
+    latestAnalyseRequestRef.current = analyseRequestId
     setLoading(true)
+    if (mode === 'fund') {
+      setFundInput(code)
+      setFundCode(code)
+      setActiveTab(FUND_TAB_KEY)
+    } else {
+      setStockInput(code)
+      setActiveTab(TECHNICAL_TAB_KEY)
+    }
+
     try {
-      if (isFundMode) {
-        setFundCode(code)
-        setActiveTab(FUND_TAB_KEY)
+      if (mode === 'fund') {
         const data = await analyseFund(code)
+        if (!isLatestAssetAction(mode, actionId)) {
+          return
+        }
         setFundAnalysis(data)
-        setFundInput(code)
-        setFundCode(code)
-        setActiveTab(FUND_TAB_KEY)
+        setFundCode(data.fund_code)
       } else {
         const data = await runAnalysis(code)
+        if (!isLatestAssetAction(mode, actionId)) {
+          return
+        }
         setAnalysisData(data)
-        setStockInput(code)
-        setStockCode(code)
-        setActiveTab(TECHNICAL_TAB_KEY)
+        setStockCode(data.stock_code)
       }
     } catch (err: any) {
+      if (!isLatestAssetAction(mode, actionId)) {
+        return
+      }
       message.error(getErrorMessage(err, '分析失败'))
     } finally {
-      setLoading(false)
+      if (analyseRequestId === latestAnalyseRequestRef.current) {
+        setLoading(false)
+      }
     }
   }
 
   const handleRefresh = async () => {
-    const code = (isFundMode ? fundInput : stockInput).trim()
+    const mode: AssetMode = isFundMode ? 'fund' : 'stock'
+    const code = (mode === 'fund' ? fundInput : stockInput).trim()
+    const actionId = beginAssetAction(mode)
+    const refreshRequestId = latestRefreshRequestRef.current + 1
+    latestRefreshRequestRef.current = refreshRequestId
     setRefreshing(true)
+    if (mode === 'fund') {
+      setFundInput(code)
+      setFundCode(code)
+    } else {
+      setStockInput(code)
+    }
+
     try {
-      if (isFundMode) {
+      if (mode === 'fund') {
         const result = await refreshFund(code)
         const data = await analyseFund(code)
+        if (!isLatestAssetAction(mode, actionId)) {
+          return
+        }
         setFundAnalysis(data)
-        setFundInput(code)
-        setFundCode(code)
+        setFundCode(data.fund_code)
         message.success(
           `${result.fund_code} 数据已更新：${result.rows} 条，${result.date_from} ~ ${result.date_to}`,
         )
       } else {
         const result = await refreshData(code)
         const data = await runAnalysis(code)
+        if (!isLatestAssetAction(mode, actionId)) {
+          return
+        }
         setAnalysisData(data)
-        setStockInput(code)
-        setStockCode(code)
+        setStockCode(data.stock_code)
         message.success(
           `${result.stock_code} 数据已更新：${result.rows} 条，${result.date_from} ~ ${result.date_to}`,
         )
       }
     } catch (err: any) {
+      if (!isLatestAssetAction(mode, actionId)) {
+        return
+      }
       message.error(getErrorMessage(err, '刷新失败'))
     } finally {
-      setRefreshing(false)
+      if (refreshRequestId === latestRefreshRequestRef.current) {
+        setRefreshing(false)
+      }
     }
   }
 
