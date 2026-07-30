@@ -77,6 +77,11 @@ def _normalize_splits(split_df: pd.DataFrame) -> pd.DataFrame:
     return result.loc[:, ["日期", "拆分类型", "拆分折算比例"]]
 
 
+def _require_history_rows(df: pd.DataFrame) -> None:
+    if df is None or df.empty:
+        raise ValueError("基金净值数据不能为空")
+
+
 def normalize_fund_history(
     nav_df: pd.DataFrame,
     dividend_df: pd.DataFrame,
@@ -85,6 +90,7 @@ def normalize_fund_history(
     fund_name: str,
     fund_type: str,
 ) -> pd.DataFrame:
+    _require_history_rows(nav_df)
     result = nav_df.rename(columns={"净值日期": "日期"}).loc[:, ["日期", "单位净值", "日增长率"]].copy()
     result["日期"] = _normalize_dates(result["日期"])
     result["基金代码"] = normalize_fund_code(fund_code)
@@ -178,6 +184,7 @@ def refresh_fund_data(fund_code: str) -> dict:
     code = normalize_fund_code(fund_code)
     target = _cache_path(code)
     df = _download_normalized_fund_data(code)
+    _require_history_rows(df)
     _atomic_write_csv(df, target)
     cached = _read_fund_csv(target)
     return {
@@ -195,5 +202,6 @@ def load_fund_data(fund_code: str) -> pd.DataFrame:
     target = _cache_path(code)
     if not target.exists():
         df = _download_normalized_fund_data(code)
+        _require_history_rows(df)
         _atomic_write_csv(df, target)
     return _read_fund_csv(target)

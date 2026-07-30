@@ -63,11 +63,19 @@ def test_normalize_history_rejects_non_finite_nav():
         normalize_fund_history(nav, pd.DataFrame(), pd.DataFrame(), "000001", "示例基金", "混合型")
 
 
-def test_refresh_rejects_money_fund(monkeypatch, tmp_path):
+def test_normalize_history_rejects_empty_nav():
+    nav = pd.DataFrame(columns=["净值日期", "单位净值", "日增长率"])
+
+    with pytest.raises(ValueError, match="不能为空"):
+        normalize_fund_history(nav, pd.DataFrame(), pd.DataFrame(), "000001", "示例基金", "混合型")
+
+
+@pytest.mark.parametrize("fund_type", ["货币型", "ETF", "交易型开放式指数基金"])
+def test_refresh_rejects_unsupported_fund_type(monkeypatch, tmp_path, fund_type):
     monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
     monkeypatch.setattr(
         "app.services.fund_data_service._fetch_fund_metadata",
-        lambda code: {"基金代码": code, "基金简称": "货币A", "基金类型": "货币型"},
+        lambda code: {"基金代码": code, "基金简称": "示例基金", "基金类型": fund_type},
     )
     with pytest.raises(ValueError, match="不支持"):
         refresh_fund_data("000009")
@@ -84,6 +92,47 @@ def test_atomic_write_preserves_old_cache_on_failure(monkeypatch, tmp_path):
     with pytest.raises(ValueError, match="upstream failed"):
         refresh_fund_data("000001")
     assert target.read_text(encoding="utf-8") == "old-cache"
+
+
+def test_refresh_preserves_existing_cache_when_upstream_nav_empty(monkeypatch, tmp_path):
+    cached = pd.DataFrame({
+        "日期": ["2024-01-04", "2024-01-05"],
+        "基金代码": ["000001", "000001"],
+        "基金名称": ["示例基金", "示例基金"],
+        "基金类型": ["混合型", "混合型"],
+        "单位净值": [1.0, 1.1],
+        "日增长率": [0.0, 10.0],
+        "每份分红": [0.0, 0.0],
+        "拆分类型": ["", ""],
+        "拆分折算比例": [1.0, 1.0],
+    })
+    target = tmp_path / "Fund_000001.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    expected_cache = target.read_text(encoding="utf-8-sig")
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service._fetch_fund_metadata",
+        lambda code: {"基金代码": code, "基金简称": "示例基金", "基金类型": "混合型"},
+    )
+
+    def fake_fund_open_fund_info_em(symbol, indicator):
+        if indicator == "单位净值走势":
+            return pd.DataFrame(columns=["净值日期", "单位净值", "日增长率"])
+        if indicator == "分红送配详情":
+            return pd.DataFrame(columns=["除息日", "每10份分红"])
+        if indicator == "拆分详情":
+            return pd.DataFrame(columns=["拆分折算日", "拆分类型", "拆分折算比例"])
+        raise AssertionError(f"unexpected indicator: {indicator}")
+
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_open_fund_info_em",
+        fake_fund_open_fund_info_em,
+    )
+    with pytest.raises(ValueError, match="不能为空"):
+        refresh_fund_data("000001")
+        refresh_fund_data("000001")
+
+    assert target.read_text(encoding="utf-8-sig") == expected_cache
 
 
 def test_refresh_raises_fund_not_found_when_code_missing(monkeypatch, tmp_path):
