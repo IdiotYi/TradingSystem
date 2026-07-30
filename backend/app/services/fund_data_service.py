@@ -128,6 +128,23 @@ def _validate_supported_type(fund_type: str) -> None:
             raise ValueError(f"不支持基金类型: {normalized_type}")
 
 
+def _fetch_exchange_listed_fund_codes() -> set[str]:
+    funds = ak.fund_etf_fund_daily_em()
+    if funds is None or funds.empty:
+        raise ValueError("场内ETF列表不能为空")
+    if "基金代码" not in funds.columns:
+        raise ValueError("场内ETF列表缺少基金代码")
+
+    codes = (
+        funds["基金代码"]
+        .astype("string")
+        .str.strip()
+        .str.replace(r"\.0$", "", regex=True)
+        .str.zfill(6)
+    )
+    return set(codes[codes.str.fullmatch(r"\d{6}", na=False)].tolist())
+
+
 def _fetch_fund_metadata(code: str) -> dict:
     funds = ak.fund_name_em().copy()
     funds["基金代码"] = funds["基金代码"].astype(str).str.zfill(6)
@@ -145,6 +162,8 @@ def _fetch_fund_metadata(code: str) -> dict:
 def _download_normalized_fund_data(code: str) -> pd.DataFrame:
     metadata = _fetch_fund_metadata(code)
     _validate_supported_type(metadata["基金类型"])
+    if code in _fetch_exchange_listed_fund_codes():
+        raise ValueError(f"不支持场内ETF基金: {code}")
     nav = ak.fund_open_fund_info_em(symbol=code, indicator="单位净值走势")
     dividends = ak.fund_open_fund_info_em(symbol=code, indicator="分红送配详情")
     splits = ak.fund_open_fund_info_em(symbol=code, indicator="拆分详情")
@@ -175,7 +194,17 @@ def _atomic_write_csv(df: pd.DataFrame, target: Path) -> None:
 
 
 def _read_fund_csv(target: Path) -> pd.DataFrame:
-    df = pd.read_csv(target, encoding="utf-8-sig")
+    df = pd.read_csv(
+        target,
+        encoding="utf-8-sig",
+        dtype={"基金代码": "string"},
+    )
+    df["基金代码"] = (
+        df["基金代码"]
+        .str.strip()
+        .str.zfill(6)
+        .map(normalize_fund_code)
+    )
     df["日期"] = pd.to_datetime(df["日期"], errors="raise").dt.strftime("%Y-%m-%d")
     return df.sort_values("日期").reset_index(drop=True).loc[:, FUND_COLUMNS]
 

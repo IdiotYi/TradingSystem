@@ -35,6 +35,17 @@ def test_missing_friday_moves_to_thursday_in_same_week():
     }
 
 
+def test_incomplete_current_week_does_not_schedule_future_friday():
+    df = make_fund_df([
+        {"日期": "2024-01-08", "单位净值": 1.0},
+        {"日期": "2024-01-11", "单位净值": 1.1},
+    ])
+
+    events = select_weekly_investment_dates(df, "2024-01-01", weekday=5)
+
+    assert events == []
+
+
 def test_missing_monday_does_not_cross_into_previous_week():
     df = make_fund_df([
         {"日期": "2024-01-05", "单位净值": 1.0},

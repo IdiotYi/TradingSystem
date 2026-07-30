@@ -14,9 +14,14 @@ import FundInvestmentSummary from './FundInvestmentSummary'
 interface Props {
   fundCode: string
   analysis: FundAnalysisResponse | null
+  analysisGeneration: number
 }
 
-const FundInvestmentTab: React.FC<Props> = ({ fundCode, analysis }) => {
+const FundInvestmentTab: React.FC<Props> = ({
+  fundCode,
+  analysis,
+  analysisGeneration,
+}) => {
   const [result, setResult] = useState<FundBacktestResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const requestIdRef = useRef(0)
@@ -27,7 +32,7 @@ const FundInvestmentTab: React.FC<Props> = ({ fundCode, analysis }) => {
     requestIdRef.current += 1
     setResult(null)
     setLoading(false)
-  }, [analysis?.fund_code, analysis?.date_from, analysis?.date_to, analysis?.latest_nav, analysis?.rows, fundCode])
+  }, [analysis?.fund_code, analysisGeneration, fundCode])
 
   const handleRun = async (req: FundBacktestRequest) => {
     const requestId = requestIdRef.current + 1

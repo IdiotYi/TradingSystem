@@ -29,6 +29,7 @@ function getErrorMessage(err: any, fallback: string) {
 const App: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null)
   const [fundAnalysis, setFundAnalysis] = useState<FundAnalysisResponse | null>(null)
+  const [fundAnalysisGeneration, setFundAnalysisGeneration] = useState(0)
   const [stockInput, setStockInput] = useState('')
   const [fundInput, setFundInput] = useState('')
   const [stockCode, setStockCode] = useState('')
@@ -86,6 +87,7 @@ const App: React.FC = () => {
           return
         }
         setFundAnalysis(data)
+        setFundAnalysisGeneration((generation) => generation + 1)
         setFundCode(data.fund_code)
       } else {
         const data = await runAnalysis(code)
@@ -129,6 +131,7 @@ const App: React.FC = () => {
           return
         }
         setFundAnalysis(data)
+        setFundAnalysisGeneration((generation) => generation + 1)
         setFundCode(data.fund_code)
         message.success(
           `${result.fund_code} 数据已更新：${result.rows} 条，${result.date_from} ~ ${result.date_to}`,
@@ -182,7 +185,11 @@ const App: React.FC = () => {
       label: '基金定投',
       children: (
         <div className="tab-pane-inner">
-          <FundInvestmentTab fundCode={fundCode} analysis={fundAnalysis} />
+          <FundInvestmentTab
+            fundCode={fundCode}
+            analysis={fundAnalysis}
+            analysisGeneration={fundAnalysisGeneration}
+          />
         </div>
       ),
     },

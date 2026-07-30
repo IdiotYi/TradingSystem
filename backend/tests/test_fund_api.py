@@ -71,6 +71,32 @@ def test_fund_refresh_returns_service_payload(monkeypatch):
     assert response.json() == payload
 
 
+def test_cached_000001_analysis_code_can_round_trip_into_backtest(monkeypatch, tmp_path):
+    cached = make_fund_df()
+    cached.to_csv(
+        tmp_path / "Fund_000001.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+
+    analysis_response = post_json("/api/fund/analysis", {"fund_code": "000001"})
+    assert analysis_response.status_code == 200
+
+    analysis = analysis_response.json()
+    backtest_response = post_json("/api/fund/backtest", {
+        "fund_code": analysis["fund_code"],
+        "strategy_name": "weekly_investment",
+        "start_date": "2024-01-01",
+        "weekday": 5,
+        "amount": 1000,
+    })
+
+    assert analysis["fund_code"] == "000001"
+    assert backtest_response.status_code == 200
+    assert backtest_response.json()["fund_code"] == "000001"
+
+
 def test_fund_backtest_rejects_invalid_weekday():
     response = post_json("/api/fund/backtest", {
         "fund_code": "000001",

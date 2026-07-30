@@ -27,12 +27,15 @@ def select_weekly_investment_dates(
 
     start = pd.Timestamp(start_date).normalize()
     dates = pd.to_datetime(df["日期"], errors="raise").sort_values()
+    latest_date = dates.max().normalize()
     result = []
 
     iso = dates.dt.isocalendar()
     for (iso_year, iso_week), week_dates in dates.groupby([iso.year, iso.week]):
         monday = pd.Timestamp.fromisocalendar(int(iso_year), int(iso_week), 1)
         target = monday + pd.Timedelta(days=weekday - 1)
+        if target > latest_date:
+            continue
         eligible = week_dates[(week_dates <= target) & (week_dates >= start)]
         if eligible.empty:
             continue

@@ -81,6 +81,78 @@ def test_refresh_rejects_unsupported_fund_type(monkeypatch, tmp_path, fund_type)
         refresh_fund_data("000009")
 
 
+def test_refresh_rejects_exchange_listed_etf_before_nav_download(monkeypatch, tmp_path):
+    nav_calls = []
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service._fetch_fund_metadata",
+        lambda code: {
+            "基金代码": code,
+            "基金简称": "沪深300ETF",
+            "基金类型": "指数型-股票",
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: pd.DataFrame({"基金代码": ["510300"]}),
+    )
+
+    def fake_fund_open_fund_info_em(symbol, indicator):
+        nav_calls.append(indicator)
+        if indicator == "单位净值走势":
+            return pd.DataFrame({
+                "净值日期": ["2024-01-05"],
+                "单位净值": [4.0],
+                "日增长率": [0.0],
+            })
+        return pd.DataFrame()
+
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_open_fund_info_em",
+        fake_fund_open_fund_info_em,
+    )
+
+    with pytest.raises(ValueError, match="场内ETF"):
+        refresh_fund_data("510300")
+
+    assert nav_calls == []
+
+
+def test_refresh_supports_off_exchange_index_fund(monkeypatch, tmp_path):
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service._fetch_fund_metadata",
+        lambda code: {
+            "基金代码": code,
+            "基金简称": "普通指数基金",
+            "基金类型": "指数型-股票",
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: pd.DataFrame({"基金代码": ["510300"]}),
+    )
+
+    def fake_fund_open_fund_info_em(symbol, indicator):
+        if indicator == "单位净值走势":
+            return pd.DataFrame({
+                "净值日期": ["2024-01-05"],
+                "单位净值": [1.0],
+                "日增长率": [0.0],
+            })
+        return pd.DataFrame()
+
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_open_fund_info_em",
+        fake_fund_open_fund_info_em,
+    )
+
+    result = refresh_fund_data("000001")
+
+    assert result["fund_code"] == "000001"
+    assert result["fund_type"] == "指数型-股票"
+
+
 def test_atomic_write_preserves_old_cache_on_failure(monkeypatch, tmp_path):
     target = tmp_path / "Fund_000001.csv"
     target.write_text("old-cache", encoding="utf-8")
@@ -113,6 +185,10 @@ def test_refresh_preserves_existing_cache_when_upstream_nav_empty(monkeypatch, t
     monkeypatch.setattr(
         "app.services.fund_data_service._fetch_fund_metadata",
         lambda code: {"基金代码": code, "基金简称": "示例基金", "基金类型": "混合型"},
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: pd.DataFrame({"基金代码": ["510300"]}),
     )
 
     def fake_fund_open_fund_info_em(symbol, indicator):
@@ -172,3 +248,4 @@ def test_load_fund_data_downloads_when_cache_missing(monkeypatch, tmp_path):
 
     assert (tmp_path / "Fund_000001.csv").exists()
     assert result["日期"].tolist() == ["2024-01-04", "2024-01-05"]
+    assert result["基金代码"].tolist() == ["000001", "000001"]
