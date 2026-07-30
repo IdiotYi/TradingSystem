@@ -1,46 +1,54 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { Input, Button, Spin, message } from 'antd'
 import { SearchOutlined, SyncOutlined } from '@ant-design/icons'
-import { refreshData } from '../../services/api'
 
 interface HeaderProps {
-  onAnalyse: (code: string) => void
+  mode: 'stock' | 'fund'
+  value: string
   loading: boolean
+  refreshing: boolean
+  onValueChange: (value: string) => void
+  onAnalyse: () => void
+  onRefresh: () => Promise<void>
 }
 
-const Header: React.FC<HeaderProps> = ({ onAnalyse, loading }) => {
-  const [code, setCode] = useState('')
-  const [refreshing, setRefreshing] = useState(false)
+const Header: React.FC<HeaderProps> = ({
+  mode,
+  value,
+  loading,
+  refreshing,
+  onValueChange,
+  onAnalyse,
+  onRefresh,
+}) => {
+  const assetLabel = mode === 'fund' ? '基金' : '股票/ETF'
+  const placeholder = mode === 'fund'
+    ? '输入基金代码，如 000001'
+    : '输入股票/ETF代码，如 600519'
 
   const handleSubmit = () => {
-    const trimmed = code.trim()
-    if (trimmed) onAnalyse(trimmed)
+    if (!value.trim()) {
+      message.warning(`请先输入${assetLabel}代码`)
+      return
+    }
+    onAnalyse()
   }
 
   const handleRefresh = async () => {
-    const trimmed = code.trim()
-    if (!trimmed) {
-      message.warning('请先输入股票代码')
+    if (!value.trim()) {
+      message.warning(`请先输入${assetLabel}代码`)
       return
     }
-    setRefreshing(true)
-    try {
-      const result = await refreshData(trimmed)
-      message.success(`${result.stock_code} 数据已更新：${result.rows} 条，${result.date_from} ~ ${result.date_to}`)
-    } catch (err: any) {
-      message.error(err?.response?.data?.detail || `刷新失败: ${err.message}`)
-    } finally {
-      setRefreshing(false)
-    }
+    await onRefresh()
   }
 
   return (
     <div className="app-header">
       <span className="app-logo">📈 TradingSystem</span>
       <Input
-        placeholder="输入股票/ETF代码，如 600519"
-        value={code}
-        onChange={e => setCode(e.target.value)}
+        placeholder={placeholder}
+        value={value}
+        onChange={e => onValueChange(e.target.value)}
         onPressEnter={handleSubmit}
         style={{ width: 260, background: '#21262d', borderColor: '#30363d', color: '#e6edf3' }}
         allowClear
