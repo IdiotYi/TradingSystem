@@ -45,6 +45,7 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
         stop_loss_pct: pct(values.stop_loss_pct, p.stop_loss_pct),
         add_position_pct: pct(values.add_position_pct, p.add_position_pct),
         half_position_ratio: pct(values.half_position_ratio, p.half_position_ratio),
+        recent_high_window: p.recent_high_window,
         bias_n: num(values.bias_n, p.bias_n),
         momentum_day: num(values.momentum_day, p.momentum_day),
         slope_n: num(values.slope_n, p.slope_n),

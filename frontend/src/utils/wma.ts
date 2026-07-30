@@ -20,7 +20,7 @@ export function computeWMA(
       continue
     }
     const blend = t * o + (1 - t) * c
-    const cur = prev == null ? blend : 0.5 * blend + 0.5 * prev
+    const cur: number = prev == null ? blend : 0.5 * blend + 0.5 * prev
     out[i] = cur
     prev = cur
   }
@@ -59,7 +59,7 @@ export function computeEMA(
   for (let i = 0; i < n; i++) {
     const c = close[i]
     if (c == null) { out[i] = prev; continue }
-    const cur = prev == null ? c : alpha * c + (1 - alpha) * prev
+    const cur: number = prev == null ? c : alpha * c + (1 - alpha) * prev
     out[i] = cur
     prev = cur
   }
