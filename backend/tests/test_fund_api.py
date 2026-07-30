@@ -1,12 +1,24 @@
+import asyncio
+
+import httpx
 import pandas as pd
 import pytest
-from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services.fund_data_service import FundNotFoundError
 
 
-client = TestClient(app)
+async def _post(path: str, body: dict) -> httpx.Response:
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+    ) as client:
+        return await client.post(path, json=body)
+
+
+def post_json(path: str, body: dict) -> httpx.Response:
+    return asyncio.run(_post(path, body))
 
 
 def make_fund_df() -> pd.DataFrame:
@@ -36,7 +48,7 @@ def test_fund_analysis_returns_service_payload(monkeypatch):
     }
     monkeypatch.setattr("app.api.fund.get_fund_analysis", lambda code: payload)
 
-    response = client.post("/api/fund/analysis", json={"fund_code": "000001"})
+    response = post_json("/api/fund/analysis", {"fund_code": "000001"})
 
     assert response.status_code == 200
     assert response.json() == payload
@@ -53,14 +65,14 @@ def test_fund_refresh_returns_service_payload(monkeypatch):
     }
     monkeypatch.setattr("app.api.fund.refresh_fund", lambda code: payload)
 
-    response = client.post("/api/fund/refresh", json={"fund_code": "000001"})
+    response = post_json("/api/fund/refresh", {"fund_code": "000001"})
 
     assert response.status_code == 200
     assert response.json() == payload
 
 
 def test_fund_backtest_rejects_invalid_weekday():
-    response = client.post("/api/fund/backtest", json={
+    response = post_json("/api/fund/backtest", {
         "fund_code": "000001",
         "strategy_name": "weekly_investment",
         "start_date": "2020-01-01",
@@ -69,6 +81,19 @@ def test_fund_backtest_rejects_invalid_weekday():
     })
 
     assert response.status_code == 422
+
+
+def test_fund_backtest_invalid_strategy_maps_to_400():
+    response = post_json("/api/fund/backtest", {
+        "fund_code": "000001",
+        "strategy_name": "monthly_investment",
+        "start_date": "2020-01-01",
+        "weekday": 5,
+        "amount": 1000,
+    })
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "不支持的基金定投策略: monthly_investment"
 
 
 @pytest.mark.parametrize(
@@ -97,7 +122,7 @@ def test_missing_fund_maps_to_404(monkeypatch, target, endpoint, body):
         ),
     )
 
-    response = client.post(endpoint, json=body)
+    response = post_json(endpoint, body)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "基金代码不存在: 999999"
@@ -109,7 +134,7 @@ def test_fund_analysis_maps_value_error_to_400(monkeypatch):
         lambda code: (_ for _ in ()).throw(ValueError("基金类型不支持")),
     )
 
-    response = client.post("/api/fund/analysis", json={"fund_code": "000009"})
+    response = post_json("/api/fund/analysis", {"fund_code": "000009"})
 
     assert response.status_code == 400
     assert response.json()["detail"] == "基金类型不支持"
@@ -121,7 +146,7 @@ def test_fund_backtest_maps_unexpected_errors_to_500(monkeypatch):
         lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("boom")),
     )
 
-    response = client.post("/api/fund/backtest", json={
+    response = post_json("/api/fund/backtest", {
         "fund_code": "000001",
         "strategy_name": "weekly_investment",
         "start_date": "2020-01-01",

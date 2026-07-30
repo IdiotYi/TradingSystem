@@ -1,6 +1,5 @@
 import traceback
 from datetime import date
-from typing import Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -22,7 +21,7 @@ class FundCodeRequest(BaseModel):
 
 class FundBacktestRequest(BaseModel):
     fund_code: str
-    strategy_name: Literal["weekly_investment"] = "weekly_investment"
+    strategy_name: str = "weekly_investment"
     start_date: date
     weekday: int = Field(ge=1, le=5)
     amount: float = Field(gt=0)
