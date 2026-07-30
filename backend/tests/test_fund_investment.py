@@ -68,6 +68,44 @@ def test_same_day_order_is_split_then_dividend_then_investment():
         df, start_date="2024-01-01", weekday=5, amount=100.0
     )
 
+    assert result["events"] == [
+        {
+            "event_type": "investment",
+            "date": "2024-01-05",
+            "scheduled_date": "2024-01-05",
+            "advanced": False,
+            "nav": 1.0,
+            "amount": 100.0,
+            "acquired_shares": 100.0,
+            "shares_after": 100.0,
+        },
+        {
+            "event_type": "split",
+            "date": "2024-01-12",
+            "split_type": "份额折算",
+            "split_ratio": 2.0,
+            "shares_before": 100.0,
+            "shares_after": 200.0,
+        },
+        {
+            "event_type": "dividend",
+            "date": "2024-01-12",
+            "dividend_per_share": 0.1,
+            "dividend_cash": 20.0,
+            "acquired_shares": 20.0,
+            "shares_after": 220.0,
+        },
+        {
+            "event_type": "investment",
+            "date": "2024-01-12",
+            "scheduled_date": "2024-01-12",
+            "advanced": False,
+            "nav": 1.0,
+            "amount": 100.0,
+            "acquired_shares": 100.0,
+            "shares_after": 320.0,
+        },
+    ]
     assert result["summary"]["final_shares"] == pytest.approx(320.0)
     assert result["summary"]["total_invested"] == 200.0
     assert [event["event_type"] for event in result["events"]] == [
@@ -86,6 +124,15 @@ def test_summary_uses_fractional_shares_and_latest_nav():
     )
 
     summary = result["summary"]
+    assert result["dates"] == ["2024-01-05", "2024-01-12"]
+    assert result["asset_value_series"] == [
+        pytest.approx(100.0),
+        pytest.approx(233.33333333333334),
+    ]
+    assert result["return_series"] == [
+        pytest.approx(0.0),
+        pytest.approx(1 / 6),
+    ]
     assert summary["investment_count"] == 2
     assert summary["total_invested"] == 200.0
     assert summary["final_shares"] == pytest.approx(100 / 3 + 25)
