@@ -50,6 +50,8 @@ const App: React.FC = () => {
     setLoading(true)
     try {
       if (isFundMode) {
+        setFundCode(code)
+        setActiveTab(FUND_TAB_KEY)
         const data = await analyseFund(code)
         setFundAnalysis(data)
         setFundInput(code)

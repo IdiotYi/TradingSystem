@@ -55,3 +55,16 @@ body {
 .ant-table-tbody > tr:hover > td {
   background: #21262d !important;
 }
+
+.fund-chart-shell {
+  margin-top: 16px;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d1117;
+}
+
+.fund-event-note {
+  white-space: normal;
+  line-height: 1.5;
+}

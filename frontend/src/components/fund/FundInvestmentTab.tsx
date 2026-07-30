@@ -1,6 +1,15 @@
-import React from 'react'
-import { Card, Descriptions, Empty, Tag, Typography } from 'antd'
-import type { FundAnalysisResponse } from '../../types/fund'
+import React, { useEffect, useRef, useState } from 'react'
+import { Card, Descriptions, Empty, Spin, Tag, Typography, message } from 'antd'
+import { runFundBacktest } from '../../services/api'
+import type {
+  FundAnalysisResponse,
+  FundBacktestRequest,
+  FundBacktestResponse,
+} from '../../types/fund'
+import FundEventTable from './FundEventTable'
+import FundInvestmentChart from './FundInvestmentChart'
+import FundInvestmentConfig from './FundInvestmentConfig'
+import FundInvestmentSummary from './FundInvestmentSummary'
 
 interface Props {
   fundCode: string
@@ -8,7 +17,48 @@ interface Props {
 }
 
 const FundInvestmentTab: React.FC<Props> = ({ fundCode, analysis }) => {
-  if (!analysis) {
+  const [result, setResult] = useState<FundBacktestResponse | null>(null)
+  const [loading, setLoading] = useState(false)
+  const requestIdRef = useRef(0)
+  const latestFundCodeRef = useRef(fundCode)
+
+  useEffect(() => {
+    latestFundCodeRef.current = analysis?.fund_code ?? fundCode
+    requestIdRef.current += 1
+    setResult(null)
+    setLoading(false)
+  }, [analysis?.fund_code, analysis?.date_from, analysis?.date_to, analysis?.latest_nav, analysis?.rows, fundCode])
+
+  const handleRun = async (req: FundBacktestRequest) => {
+    const requestId = requestIdRef.current + 1
+    requestIdRef.current = requestId
+    setLoading(true)
+    setResult(null)
+    try {
+      const data = await runFundBacktest(req)
+      if (requestId !== requestIdRef.current || req.fund_code !== latestFundCodeRef.current) {
+        return
+      }
+      setResult(data)
+    } catch (err: any) {
+      if (requestId !== requestIdRef.current || req.fund_code !== latestFundCodeRef.current) {
+        return
+      }
+      const detail = err?.response?.data?.detail
+      const msg = typeof detail === 'string'
+        ? detail
+        : detail
+          ? JSON.stringify(detail)
+          : `基金定投回测失败: ${err.message}`
+      message.error(msg)
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setLoading(false)
+      }
+    }
+  }
+
+  if (!analysis || analysis.fund_code !== fundCode) {
     return (
       <Empty
         description={
@@ -55,10 +105,39 @@ const FundInvestmentTab: React.FC<Props> = ({ fundCode, analysis }) => {
         </Descriptions>
       </Card>
 
-      <Empty
-        description={<span style={{ color: '#8b949e' }}>定投策略配置与结果展示将在后续任务中补齐</span>}
-        style={{ marginTop: 48 }}
+      <FundInvestmentConfig
+        fundCode={analysis.fund_code}
+        analysis={analysis}
+        onRun={handleRun}
+        loading={loading}
       />
+
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 80 }}>
+          <Spin size="large" />
+          <div style={{ color: '#8b949e', marginTop: 16 }}>
+            正在运行基金定投回测…（计算由后端完成，请稍候）
+          </div>
+        </div>
+      )}
+
+      {!loading && !result && (
+        <Empty
+          description={<span style={{ color: '#8b949e' }}>配置参数后点击「运行定投回测」</span>}
+          style={{ marginTop: 48 }}
+        />
+      )}
+
+      {!loading && result && (
+        <>
+          <FundInvestmentSummary summary={result.summary} />
+          <FundInvestmentChart data={result} />
+          <div style={{ marginTop: 24 }}>
+            <div style={{ color: '#8b949e', marginBottom: 8, fontWeight: 600 }}>事件明细</div>
+            <FundEventTable events={result.events} />
+          </div>
+        </>
+      )}
     </div>
   )
 }
