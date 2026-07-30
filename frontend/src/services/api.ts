@@ -2,6 +2,12 @@ import axios from 'axios'
 import type { AnalysisResponse } from '../types/stock'
 import type { BacktestRequest, BacktestResponse } from '../types/backtest'
 import type { ChanRequest, ChanResponse } from '../types/chan'
+import type {
+  FundAnalysisResponse,
+  FundBacktestRequest,
+  FundBacktestResponse,
+  FundRefreshResponse,
+} from '../types/fund'
 
 const client = axios.create({
   baseURL: '/api',
@@ -26,5 +32,26 @@ export async function refreshData(stockCode: string): Promise<{ stock_code: stri
 
 export async function runChanAnalysis(request: ChanRequest): Promise<ChanResponse> {
   const { data } = await client.post<ChanResponse>('/chan/analyze', request)
+  return data
+}
+
+export async function analyseFund(fundCode: string): Promise<FundAnalysisResponse> {
+  const { data } = await client.post<FundAnalysisResponse>('/fund/analysis', {
+    fund_code: fundCode,
+  })
+  return data
+}
+
+export async function refreshFund(fundCode: string): Promise<FundRefreshResponse> {
+  const { data } = await client.post<FundRefreshResponse>('/fund/refresh', {
+    fund_code: fundCode,
+  })
+  return data
+}
+
+export async function runFundBacktest(
+  request: FundBacktestRequest,
+): Promise<FundBacktestResponse> {
+  const { data } = await client.post<FundBacktestResponse>('/fund/backtest', request)
   return data
 }
