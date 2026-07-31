@@ -8,6 +8,7 @@ import ChanChart from './ChanChart'
 
 interface Props {
   stockCode: string
+  dailyDataGeneration: number
 }
 
 const { RangePicker } = DatePicker
@@ -39,7 +40,7 @@ function getPeriodLabel(period: ChanPeriod) {
   return PERIOD_OPTIONS.find(option => option.value === period)?.label ?? period
 }
 
-const ChanTab: React.FC<Props> = ({ stockCode }) => {
+const ChanTab: React.FC<Props> = ({ stockCode, dailyDataGeneration }) => {
   const [form] = Form.useForm()
   const [result, setResult] = useState<ChanResponse | null>(null)
   const [period, setPeriod] = useState<ChanPeriod>('daily')
@@ -48,6 +49,7 @@ const ChanTab: React.FC<Props> = ({ stockCode }) => {
   const latestActionRef = useRef(0)
   const latestAnalyzeRequestRef = useRef(0)
   const latestRefreshRequestRef = useRef(0)
+  const latestDailyDataGenerationRef = useRef(dailyDataGeneration)
   const latestStockCodeRef = useRef(stockCode)
   const latestPeriodRef = useRef<ChanPeriod>('daily')
 
@@ -123,6 +125,29 @@ const ChanTab: React.FC<Props> = ({ stockCode }) => {
       actionId,
     )
   }, [form, stockCode])
+
+  useEffect(() => {
+    if (dailyDataGeneration === latestDailyDataGenerationRef.current) {
+      return
+    }
+
+    latestDailyDataGenerationRef.current = dailyDataGeneration
+
+    if (!stockCode || period !== 'daily') {
+      return
+    }
+
+    const range = form.getFieldValue('range') as [Dayjs, Dayjs] | undefined
+    const [startValue, endValue] = range ?? defaultRange(period)
+    const actionId = beginAction()
+    void runAnalysis(
+      stockCode,
+      period,
+      startValue.format('YYYY-MM-DD'),
+      endValue.format('YYYY-MM-DD'),
+      actionId,
+    )
+  }, [dailyDataGeneration, form, period, stockCode])
 
   const handleFinish = (values: any) => {
     const [start, end] = values.range as [Dayjs, Dayjs]

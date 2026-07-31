@@ -29,6 +29,7 @@ function getErrorMessage(err: any, fallback: string) {
 const App: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null)
   const [fundAnalysis, setFundAnalysis] = useState<FundAnalysisResponse | null>(null)
+  const [dailyDataGeneration, setDailyDataGeneration] = useState(0)
   const [fundAnalysisGeneration, setFundAnalysisGeneration] = useState(0)
   const [fundDataGeneration, setFundDataGeneration] = useState(0)
   const [stockInput, setStockInput] = useState('')
@@ -113,6 +114,7 @@ const App: React.FC = () => {
   const handleRefresh = async () => {
     const mode: AssetMode = isFundMode ? 'fund' : 'stock'
     const code = (mode === 'fund' ? fundInput : stockInput).trim()
+    const shouldTriggerDailyChanRefresh = mode === 'stock' && code === stockCode
     const actionId = beginAssetAction(mode)
     const refreshRequestId = latestRefreshRequestRef.current + 1
     latestRefreshRequestRef.current = refreshRequestId
@@ -149,6 +151,9 @@ const App: React.FC = () => {
         }
         setAnalysisData(data)
         setStockCode(data.stock_code)
+        if (shouldTriggerDailyChanRefresh) {
+          setDailyDataGeneration((generation) => generation + 1)
+        }
         message.success(
           `${result.stock_code} 数据已更新：${result.rows} 条，${result.date_from} ~ ${result.date_to}`,
         )
@@ -213,7 +218,7 @@ const App: React.FC = () => {
       label: '缠论',
       children: (
         <div className="tab-pane-inner">
-          <ChanTab stockCode={stockCode} />
+          <ChanTab stockCode={stockCode} dailyDataGeneration={dailyDataGeneration} />
         </div>
       ),
       disabled: !stockCode,
