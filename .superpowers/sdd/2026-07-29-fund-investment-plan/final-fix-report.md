@@ -547,3 +547,33 @@ Files changed in this round:
 - `frontend/src/App.tsx`
 - `frontend/src/components/fund/FundInvestmentTab.tsx`
 - `.superpowers/sdd/2026-07-29-fund-investment-plan/final-fix-report.md`
+
+## Extra Final Fix Round 2
+
+The targeted re-review found that whitespace-only listing values were stripped
+to an empty string and then padded to `000000`. That synthetic value passed the
+six-digit check, so an otherwise invalid ETF listing was treated as
+authoritative.
+
+The normalization now validates the stripped value as one to six digits before
+padding it to six digits. Blank, null, and non-numeric rows are discarded, while
+legitimate shorter numeric representations still normalize consistently.
+
+The all-invalid regression now includes `"   "` and failed before the
+production change by entering the NAV/event path. After the fix:
+
+```text
+66 passed in 8.49s
+```
+
+The frontend production build also completed successfully with only the
+existing large-chunk warning.
+
+Commit:
+
+```text
+283a1df fix: reject blank exchange fund codes
+```
+
+The scoped review reported no significant issues and confirmed the fund
+feature is safe to serve as the dependency for the intraday Chan plan.
