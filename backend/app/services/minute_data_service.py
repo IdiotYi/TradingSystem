@@ -2,6 +2,7 @@ import math
 from datetime import date
 from pathlib import Path
 from typing import Literal, cast
+from uuid import uuid4
 
 import akshare as ak
 import baostock as bs
@@ -339,7 +340,7 @@ def _coerce_download_frame(
 
 def _atomic_write_minute_csv(df: pd.DataFrame, target: Path) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
-    temp = target.with_suffix(target.suffix + ".tmp")
+    temp = target.with_name(f"{target.name}.{uuid4().hex}.tmp")
     try:
         df.to_csv(temp, index=False, encoding="utf-8-sig")
         pd.read_csv(temp, encoding="utf-8-sig")
@@ -349,7 +350,11 @@ def _atomic_write_minute_csv(df: pd.DataFrame, target: Path) -> None:
             temp.unlink()
 
 
-def _read_minute_csv(target: Path) -> pd.DataFrame:
+def _read_minute_csv(
+    target: Path,
+    expected_code: str,
+    expected_period: MinutePeriod,
+) -> pd.DataFrame:
     frame = pd.read_csv(
         target,
         encoding="utf-8-sig",
@@ -366,6 +371,10 @@ def _read_minute_csv(target: Path) -> pd.DataFrame:
     _validate_price_rows(frame)
     frame["股票代码"] = frame["股票代码"].map(lambda value: normalize_minute_code(str(value).strip()))
     frame["周期"] = frame["周期"].map(lambda value: _normalize_period(str(value).strip()))
+    if not frame["股票代码"].eq(expected_code).all():
+        raise ValueError(f"分钟数据缓存股票代码与请求不一致: 期望 {expected_code}")
+    if not frame["周期"].eq(expected_period).all():
+        raise ValueError(f"分钟数据缓存周期与请求不一致: 期望 {expected_period}")
     frame["复权"] = frame["复权"].map(lambda value: str(value).strip())
     if not frame["复权"].eq("qfq").all():
         raise ValueError("分钟数据缓存复权标记必须为qfq")
@@ -429,7 +438,7 @@ def refresh_minute_data(stock_code: str, period: MinutePeriod) -> dict:
     cropped = _crop_minute_frame(frame, start_date, end_date)
     _require_history_rows(cropped, "分钟数据")
     _atomic_write_minute_csv(cropped, target)
-    cached = _read_minute_csv(target)
+    cached = _read_minute_csv(target, code, normalized_period)
     result = _build_minute_metadata(cached, start_date)
     result.update({
         "stock_code": code,
@@ -450,5 +459,5 @@ def load_minute_data(
     target = _minute_cache_path(code, normalized_period)
     if not target.exists():
         refresh_minute_data(code, normalized_period)
-    cached = _read_minute_csv(target)
+    cached = _read_minute_csv(target, code, normalized_period)
     return cached, _build_minute_metadata(cached, start_date)

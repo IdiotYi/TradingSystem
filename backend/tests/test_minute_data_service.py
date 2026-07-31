@@ -1,6 +1,7 @@
 import importlib
 import importlib.util
 from datetime import date
+from pathlib import Path
 from typing import get_args
 
 import pandas as pd
@@ -330,3 +331,48 @@ def test_failed_refresh_preserves_existing_cache(monkeypatch, tmp_path):
         service.refresh_minute_data("600519", "30")
 
     assert target.read_text(encoding="utf-8") == "existing-cache"
+
+
+@pytest.mark.parametrize(
+    ("column", "value", "pattern"),
+    [
+        ("股票代码", "000001", "股票代码"),
+        ("周期", "30", "周期"),
+    ],
+)
+def test_load_rejects_cache_metadata_mismatch(monkeypatch, tmp_path, column, value, pattern):
+    service = load_service()
+    cached = make_standard_minutes(["2026-07-29 15:00:00"])
+    cached[column] = [value]
+    target = tmp_path / "Minute_600519_5.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    monkeypatch.setattr(
+        "app.services.minute_data_service.DATA_DIR", tmp_path
+    )
+
+    with pytest.raises(ValueError, match=pattern):
+        service.load_minute_data("600519", "5")
+
+
+def test_atomic_write_uses_unique_temp_files_for_same_target(monkeypatch, tmp_path):
+    service = load_service()
+    target = tmp_path / "Minute_600519_5.csv"
+    first = make_standard_minutes(["2026-07-29 15:00:00"])
+    second = make_standard_minutes(["2026-07-29 15:05:00"])
+    original_replace = Path.replace
+    nested_write_started = False
+
+    def replace_with_nested(self, other):
+        nonlocal nested_write_started
+        if not nested_write_started:
+            nested_write_started = True
+            service._atomic_write_minute_csv(second, target)
+        return original_replace(self, other)
+
+    monkeypatch.setattr(Path, "replace", replace_with_nested)
+
+    service._atomic_write_minute_csv(first, target)
+    cached = pd.read_csv(target, encoding="utf-8-sig")
+
+    assert cached["时间"].tolist() == ["2026-07-29 15:00:00"]
+    assert list(tmp_path.glob("*.tmp")) == []
