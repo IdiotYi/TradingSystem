@@ -201,7 +201,7 @@ def test_refresh_rejects_all_invalid_exchange_codes_and_preserves_cache(
     _assert_invalid_exchange_listing_fails_closed(
         monkeypatch,
         tmp_path,
-        pd.DataFrame({"基金代码": ["bad", None]}),
+        pd.DataFrame({"基金代码": ["bad", "   ", None]}),
         "场内ETF列表未包含有效基金代码",
     )
 
