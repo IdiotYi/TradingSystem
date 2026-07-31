@@ -1,7 +1,7 @@
 import axios from 'axios'
 import type { AnalysisResponse } from '../types/stock'
 import type { BacktestRequest, BacktestResponse } from '../types/backtest'
-import type { ChanRequest, ChanResponse } from '../types/chan'
+import type { ChanRefreshResponse, ChanRequest, ChanResponse, ChanPeriod } from '../types/chan'
 import type {
   FundAnalysisResponse,
   FundBacktestRequest,
@@ -32,6 +32,17 @@ export async function refreshData(stockCode: string): Promise<{ stock_code: stri
 
 export async function runChanAnalysis(request: ChanRequest): Promise<ChanResponse> {
   const { data } = await client.post<ChanResponse>('/chan/analyze', request)
+  return data
+}
+
+export async function refreshChanData(
+  stockCode: string,
+  period: Exclude<ChanPeriod, 'daily'>,
+): Promise<ChanRefreshResponse> {
+  const { data } = await client.post<ChanRefreshResponse>('/chan/refresh', {
+    stock_code: stockCode,
+    period,
+  })
   return data
 }
 
