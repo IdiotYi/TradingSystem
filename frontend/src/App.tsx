@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [analysisData, setAnalysisData] = useState<AnalysisResponse | null>(null)
   const [fundAnalysis, setFundAnalysis] = useState<FundAnalysisResponse | null>(null)
   const [fundAnalysisGeneration, setFundAnalysisGeneration] = useState(0)
+  const [fundDataGeneration, setFundDataGeneration] = useState(0)
   const [stockInput, setStockInput] = useState('')
   const [fundInput, setFundInput] = useState('')
   const [stockCode, setStockCode] = useState('')
@@ -126,6 +127,10 @@ const App: React.FC = () => {
     try {
       if (mode === 'fund') {
         const result = await refreshFund(code)
+        if (!isLatestAssetAction(mode, actionId)) {
+          return
+        }
+        setFundDataGeneration((generation) => generation + 1)
         const data = await analyseFund(code)
         if (!isLatestAssetAction(mode, actionId)) {
           return
@@ -189,6 +194,7 @@ const App: React.FC = () => {
             fundCode={fundCode}
             analysis={fundAnalysis}
             analysisGeneration={fundAnalysisGeneration}
+            dataGeneration={fundDataGeneration}
           />
         </div>
       ),

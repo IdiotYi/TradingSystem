@@ -118,7 +118,95 @@ def test_refresh_rejects_exchange_listed_etf_before_nav_download(monkeypatch, tm
     assert nav_calls == []
 
 
-def test_refresh_supports_off_exchange_index_fund(monkeypatch, tmp_path):
+def _assert_invalid_exchange_listing_fails_closed(
+    monkeypatch,
+    tmp_path,
+    listing,
+    error_match,
+):
+    cached = pd.DataFrame({
+        "日期": ["2024-01-05"],
+        "基金代码": ["000001"],
+        "基金名称": ["旧缓存基金"],
+        "基金类型": ["混合型"],
+        "单位净值": [1.0],
+        "日增长率": [0.0],
+        "每份分红": [0.0],
+        "拆分类型": [""],
+        "拆分折算比例": [1.0],
+    })
+    target = tmp_path / "Fund_000001.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    expected_cache = target.read_bytes()
+    nav_calls = []
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service._fetch_fund_metadata",
+        lambda code: {
+            "基金代码": code,
+            "基金简称": "新数据基金",
+            "基金类型": "指数型-股票",
+        },
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: listing,
+    )
+
+    def fake_fund_open_fund_info_em(symbol, indicator):
+        nav_calls.append(indicator)
+        return pd.DataFrame({
+            "净值日期": ["2024-01-08"],
+            "单位净值": [1.1],
+            "日增长率": [10.0],
+        })
+
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_open_fund_info_em",
+        fake_fund_open_fund_info_em,
+    )
+
+    with pytest.raises(ValueError, match=error_match):
+        refresh_fund_data("000001")
+
+    assert nav_calls == []
+    assert target.read_bytes() == expected_cache
+
+
+def test_refresh_rejects_empty_exchange_listing_and_preserves_cache(monkeypatch, tmp_path):
+    _assert_invalid_exchange_listing_fails_closed(
+        monkeypatch,
+        tmp_path,
+        pd.DataFrame(),
+        "场内ETF列表不能为空",
+    )
+
+
+def test_refresh_rejects_exchange_listing_without_code_column_and_preserves_cache(
+    monkeypatch,
+    tmp_path,
+):
+    _assert_invalid_exchange_listing_fails_closed(
+        monkeypatch,
+        tmp_path,
+        pd.DataFrame({"基金简称": ["无代码基金"]}),
+        "场内ETF列表缺少基金代码",
+    )
+
+
+def test_refresh_rejects_all_invalid_exchange_codes_and_preserves_cache(
+    monkeypatch,
+    tmp_path,
+):
+    _assert_invalid_exchange_listing_fails_closed(
+        monkeypatch,
+        tmp_path,
+        pd.DataFrame({"基金代码": ["bad", None]}),
+        "场内ETF列表未包含有效基金代码",
+    )
+
+
+def test_refresh_supports_off_exchange_index_fund_with_mixed_listing_rows(monkeypatch, tmp_path):
     monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
     monkeypatch.setattr(
         "app.services.fund_data_service._fetch_fund_metadata",
@@ -130,7 +218,7 @@ def test_refresh_supports_off_exchange_index_fund(monkeypatch, tmp_path):
     )
     monkeypatch.setattr(
         "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
-        lambda: pd.DataFrame({"基金代码": ["510300"]}),
+        lambda: pd.DataFrame({"基金代码": ["bad", None, "510300"]}),
     )
 
     def fake_fund_open_fund_info_em(symbol, indicator):

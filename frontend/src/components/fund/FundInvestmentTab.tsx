@@ -15,12 +15,14 @@ interface Props {
   fundCode: string
   analysis: FundAnalysisResponse | null
   analysisGeneration: number
+  dataGeneration: number
 }
 
 const FundInvestmentTab: React.FC<Props> = ({
   fundCode,
   analysis,
   analysisGeneration,
+  dataGeneration,
 }) => {
   const [result, setResult] = useState<FundBacktestResponse | null>(null)
   const [loading, setLoading] = useState(false)
@@ -32,7 +34,7 @@ const FundInvestmentTab: React.FC<Props> = ({
     requestIdRef.current += 1
     setResult(null)
     setLoading(false)
-  }, [analysis?.fund_code, analysisGeneration, fundCode])
+  }, [analysis?.fund_code, analysisGeneration, dataGeneration, fundCode])
 
   const handleRun = async (req: FundBacktestRequest) => {
     const requestId = requestIdRef.current + 1

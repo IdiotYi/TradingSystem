@@ -142,7 +142,10 @@ def _fetch_exchange_listed_fund_codes() -> set[str]:
         .str.replace(r"\.0$", "", regex=True)
         .str.zfill(6)
     )
-    return set(codes[codes.str.fullmatch(r"\d{6}", na=False)].tolist())
+    valid_codes = set(codes[codes.str.fullmatch(r"\d{6}", na=False)].tolist())
+    if not valid_codes:
+        raise ValueError("场内ETF列表未包含有效基金代码")
+    return valid_codes
 
 
 def _fetch_fund_metadata(code: str) -> dict:

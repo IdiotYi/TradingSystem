@@ -356,3 +356,194 @@ No significant issues found in the reviewed changes.
 
 All production fixes, regressions, and this report are staged for one final
 commit with the required Copilot co-author trailer.
+
+## Extra Final Fix Round
+
+Date:
+
+```text
+2026-07-31
+```
+
+This explicitly authorized round closed the two residual load-bearing
+findings from the prior final review.
+
+### 1. ETF listing now fails closed when every row is invalid
+
+**Residual root cause**
+
+`_fetch_exchange_listed_fund_codes` rejected a missing dataframe, an empty
+dataframe, and a missing `基金代码` column, but returned an empty set after
+filtering malformed values such as `["bad", None]`. The caller interpreted
+that empty set as an authoritative list containing no exchange ETFs and
+continued into the NAV download path.
+
+**Fix**
+
+- Normalize and filter the listing as before.
+- Require the resulting set to contain at least one valid six-digit code.
+- Raise `ValueError("场内ETF列表未包含有效基金代码")` when no valid code remains.
+- Keep accepting mixed listings such as `["bad", None, "510300"]`, ignoring
+  malformed rows because the authoritative response still contains a valid
+  code.
+- Validation still runs before every NAV/event request and before the atomic
+  cache write, so all invalid-listing failures preserve the prior cache.
+
+**Regression coverage**
+
+- `test_refresh_rejects_empty_exchange_listing_and_preserves_cache`
+- `test_refresh_rejects_exchange_listing_without_code_column_and_preserves_cache`
+- `test_refresh_rejects_all_invalid_exchange_codes_and_preserves_cache`
+- `test_refresh_supports_off_exchange_index_fund_with_mixed_listing_rows`
+
+The three fail-closed tests install an existing cache, assert the exact
+listing error, assert zero NAV/event calls, and compare the cache bytes after
+the failure.
+
+**TDD RED evidence**
+
+Command:
+
+```powershell
+Set-Location 'C:\Projects\TradingSystem\.worktrees\fund-investment-and-intraday-chan\backend'
+python -m pytest tests\test_fund_data_service.py -k "empty_exchange_listing or without_code_column or all_invalid_exchange_codes or mixed_listing_rows" -q
+```
+
+Output before the production check was added:
+
+```text
+..F.                                                                     [100%]
+FAILED tests/test_fund_data_service.py::test_refresh_rejects_all_invalid_exchange_codes_and_preserves_cache
+1 failed, 3 passed, 13 deselected in 1.52s
+```
+
+The failing case showed that an all-invalid listing escaped the listing
+validator and entered downstream NAV/event normalization instead of raising
+the required `ValueError`.
+
+### 2. Cache refresh generation now invalidates results before analysis
+
+**Residual root cause**
+
+`fundAnalysisGeneration` advanced only after the follow-up
+`/api/fund/analysis` response passed the latest-action guard and was installed.
+The cache had already changed when `/api/fund/refresh` returned, so an analysis
+failure or superseded analysis completion could leave a backtest result based
+on the old cache visible.
+
+**Fix**
+
+- Added an explicit `fundDataGeneration` state in `App`.
+- After `/api/fund/refresh` succeeds, immediately check the existing
+  fund-action ID.
+- If the refresh is still the latest fund action, advance
+  `fundDataGeneration` before starting `/api/fund/analysis`.
+- If it is obsolete, return before changing the generation or starting the
+  follow-up analysis.
+- Pass the generation through the `App`/`FundInvestmentTab` contract as
+  `dataGeneration`.
+- Include `dataGeneration` in the tab invalidation effect. The effect advances
+  its backtest request ID, clears the result, and clears loading, so an
+  in-flight completion from the prior cache cannot repopulate the UI.
+- Retain `fundAnalysisGeneration` for the existing successful-analysis
+  invalidation behavior.
+
+**Sequence analysis**
+
+1. **Latest refresh succeeds, analysis succeeds:** the cache response passes
+   the action guard; `fundDataGeneration` advances and clears/cancels the old
+   result before analysis begins. The accepted analysis then installs the new
+   payload and advances `fundAnalysisGeneration`.
+2. **Latest refresh succeeds, analysis fails:** the data generation has
+   already advanced. The error path does not roll it back, so the old result
+   remains cleared.
+3. **Latest refresh succeeds, then analysis is superseded:** the cache really
+   changed while that refresh was latest, so its generation advance remains
+   valid. The later action changes the action ID, causing the old analysis
+   completion to be discarded.
+4. **Refresh becomes obsolete before its cache response returns:** a newer
+   fund action changes the action ID. The old response fails the guard and
+   returns before advancing `fundDataGeneration`, so it cannot invalidate the
+   newer selected fund.
+5. **Old backtest completes after invalidation:** the tab effect has already
+   incremented `requestIdRef`; the completion's request ID no longer matches
+   and neither success nor failure can update the result.
+
+The frontend intentionally has no test runner. TypeScript/Vite compilation
+validates the required prop contract, and the sequence analysis above checks
+the async ordering and stale-request invariants directly.
+
+### Verification
+
+Focused backend command:
+
+```powershell
+Set-Location 'C:\Projects\TradingSystem\.worktrees\fund-investment-and-intraday-chan\backend'
+python -m pytest tests\test_fund_data_service.py -q
+```
+
+Output:
+
+```text
+.................                                                        [100%]
+17 passed in 1.05s
+```
+
+Complete backend command:
+
+```powershell
+Set-Location 'C:\Projects\TradingSystem\.worktrees\fund-investment-and-intraday-chan\backend'
+python -m pytest -q
+```
+
+Output:
+
+```text
+..................................................................       [100%]
+66 passed in 8.70s
+```
+
+Frontend command:
+
+```powershell
+Set-Location 'C:\Projects\TradingSystem\.worktrees\fund-investment-and-intraday-chan\frontend'
+npm run build
+```
+
+Output:
+
+```text
+> trading-system-frontend@1.0.0 build
+> tsc && vite build
+
+vite v5.4.21 building for production...
+transforming...
+✓ 3649 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                     0.45 kB │ gzip:   0.29 kB
+dist/assets/index-BLhOlFsy.css      0.89 kB │ gzip:   0.48 kB
+dist/assets/index-9qDctDhL.js   2,245.36 kB │ gzip: 728.89 kB
+
+(!) Some chunks are larger than 500 kB after minification.
+✓ built in 10.56s
+```
+
+The large-chunk message remains the existing non-failing Vite warning.
+
+### Final review
+
+- `git diff --check` produced no errors after the report update.
+- A read-only review of the complete extra-round diff reported:
+
+```text
+No significant issues found in the reviewed changes.
+```
+
+Files changed in this round:
+
+- `backend/app/services/fund_data_service.py`
+- `backend/tests/test_fund_data_service.py`
+- `frontend/src/App.tsx`
+- `frontend/src/components/fund/FundInvestmentTab.tsx`
+- `.superpowers/sdd/2026-07-29-fund-investment-plan/final-fix-report.md`
