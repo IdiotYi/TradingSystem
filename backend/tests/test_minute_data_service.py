@@ -354,6 +354,70 @@ def test_load_rejects_cache_metadata_mismatch(monkeypatch, tmp_path, column, val
         service.load_minute_data("600519", "5")
 
 
+def test_load_trims_existing_cache_to_current_two_year_window(monkeypatch, tmp_path):
+    service = load_service()
+    cached = make_standard_minutes([
+        "2024-07-20 15:00:00",
+        "2024-07-29 15:00:00",
+        "2026-07-29 15:00:00",
+    ])
+    target = tmp_path / "Minute_600519_5.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    monkeypatch.setattr(
+        "app.services.minute_data_service.DATA_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service._today",
+        lambda: date(2026, 7, 29),
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service.refresh_minute_data",
+        lambda *args: pytest.fail("load_minute_data must not refresh an existing cache"),
+    )
+
+    frame, metadata = service.load_minute_data("600519", "5")
+    persisted = pd.read_csv(target, encoding="utf-8-sig")
+
+    assert frame["时间"].tolist() == [
+        "2024-07-29 15:00:00",
+        "2026-07-29 15:00:00",
+    ]
+    assert persisted["时间"].tolist() == [
+        "2024-07-29 15:00:00",
+        "2026-07-29 15:00:00",
+    ]
+    assert metadata["coverage_from"] == "2024-07-29 15:00:00"
+    assert metadata["coverage_to"] == "2026-07-29 15:00:00"
+    assert metadata["target_coverage_met"] is True
+
+
+def test_load_raises_when_existing_cache_has_no_rows_in_current_window(monkeypatch, tmp_path):
+    service = load_service()
+    cached = make_standard_minutes([
+        "2024-07-20 15:00:00",
+        "2024-07-28 15:00:00",
+    ])
+    target = tmp_path / "Minute_600519_5.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    monkeypatch.setattr(
+        "app.services.minute_data_service.DATA_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service._today",
+        lambda: date(2026, 7, 29),
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service.refresh_minute_data",
+        lambda *args: pytest.fail("load_minute_data must not refresh an existing cache"),
+    )
+
+    with pytest.raises(ValueError, match="当前两年窗口内"):
+        service.load_minute_data("600519", "5")
+
+    persisted = pd.read_csv(target, encoding="utf-8-sig")
+    assert persisted.empty
+
+
 def test_atomic_write_uses_unique_temp_files_for_same_target(monkeypatch, tmp_path):
     service = load_service()
     target = tmp_path / "Minute_600519_5.csv"

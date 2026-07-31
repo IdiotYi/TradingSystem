@@ -401,6 +401,25 @@ def _build_minute_metadata(frame: pd.DataFrame, start_date: date) -> dict:
     }
 
 
+def _load_cached_minute_data(
+    target: Path,
+    code: str,
+    period: MinutePeriod,
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    cached = _read_minute_csv(target, code, period)
+    cropped = _crop_minute_frame(cached, start_date, end_date)
+    if not cropped.equals(cached):
+        _atomic_write_minute_csv(cropped, target)
+        cached = _read_minute_csv(target, code, period)
+    else:
+        cached = cropped
+    if cached.empty:
+        raise ValueError("分钟数据缓存在当前两年窗口内无可用数据，请显式刷新")
+    return cached
+
+
 def download_minute_data(
     stock_code: str,
     period: MinutePeriod,
@@ -455,9 +474,15 @@ def load_minute_data(
 ) -> tuple[pd.DataFrame, dict]:
     code = normalize_minute_code(stock_code)
     normalized_period = _normalize_period(period)
-    start_date, _ = _requested_window()
+    start_date, end_date = _requested_window()
     target = _minute_cache_path(code, normalized_period)
     if not target.exists():
         refresh_minute_data(code, normalized_period)
-    cached = _read_minute_csv(target, code, normalized_period)
+    cached = _load_cached_minute_data(
+        target,
+        code,
+        normalized_period,
+        start_date,
+        end_date,
+    )
     return cached, _build_minute_metadata(cached, start_date)
