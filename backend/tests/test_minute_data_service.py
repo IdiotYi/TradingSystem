@@ -1,5 +1,6 @@
 import importlib
 import importlib.util
+from datetime import date
 from typing import get_args
 
 import pandas as pd
@@ -210,3 +211,122 @@ def test_normalize_akshare_minutes_accepts_eastmoney_columns():
         "复权": "qfq",
         "数据源": "eastmoney",
     }]
+
+
+def test_a_share_falls_back_to_akshare(monkeypatch):
+    service = load_service()
+    monkeypatch.setattr(
+        "app.services.minute_data_service._download_baostock",
+        lambda code, period, start, end: (_ for _ in ()).throw(
+            ValueError("baostock unavailable")
+        ),
+    )
+    fallback = pd.DataFrame({
+        "day": ["2026-07-29 15:00:00"],
+        "open": [10.0], "high": [11.0], "low": [9.0], "close": [10.5],
+        "volume": [1000], "amount": [10500],
+    })
+    monkeypatch.setattr(
+        "app.services.minute_data_service._download_akshare",
+        lambda code, period, start, end: (fallback, "akshare_sina"),
+    )
+
+    frame, metadata = service.download_minute_data("600519", "5")
+
+    assert metadata["data_source"] == "akshare_sina"
+    assert len(frame) == 1
+
+
+def test_etf_skips_baostock(monkeypatch):
+    service = load_service()
+    fallback = pd.DataFrame({
+        "day": ["2026-07-29 15:00:00"],
+        "open": [4.0], "high": [4.1], "low": [3.9], "close": [4.05],
+        "volume": [2000], "amount": [8100],
+    })
+    monkeypatch.setattr(
+        "app.services.minute_data_service._download_baostock",
+        lambda *args: pytest.fail("ETF must not call BaoStock"),
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service._download_akshare",
+        lambda code, period, start, end: (fallback, "akshare_sina"),
+    )
+
+    frame, metadata = service.download_minute_data("510300", "30")
+
+    assert len(frame) == 1
+    assert metadata["data_source"] == "akshare_sina"
+
+
+def make_standard_minutes(times):
+    return pd.DataFrame({
+        "时间": times,
+        "股票代码": ["600519"] * len(times),
+        "周期": ["5"] * len(times),
+        "开盘": [10.0] * len(times),
+        "最高": [11.0] * len(times),
+        "最低": [9.0] * len(times),
+        "收盘": [10.5] * len(times),
+        "成交量": [1000.0] * len(times),
+        "成交额": [10500.0] * len(times),
+        "复权": ["qfq"] * len(times),
+        "数据源": ["baostock"] * len(times),
+    })
+
+
+def test_refresh_crops_two_years_and_deduplicates(monkeypatch, tmp_path):
+    service = load_service()
+    frame = make_standard_minutes([
+        "2024-07-20 15:00:00",
+        "2024-07-29 15:00:00",
+        "2024-07-29 15:00:00",
+        "2026-07-29 15:00:00",
+    ])
+    monkeypatch.setattr(
+        "app.services.minute_data_service.DATA_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service._today",
+        lambda: date(2026, 7, 29),
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service.download_minute_data",
+        lambda code, period: (
+            frame,
+            {"data_source": "baostock"},
+        ),
+    )
+
+    result = service.refresh_minute_data("600519", "5")
+    cached = pd.read_csv(
+        tmp_path / "Minute_600519_5.csv", encoding="utf-8-sig"
+    )
+
+    assert cached["时间"].tolist() == [
+        "2024-07-29 15:00:00",
+        "2026-07-29 15:00:00",
+    ]
+    assert result["coverage_from"] == "2024-07-29 15:00:00"
+    assert result["coverage_to"] == "2026-07-29 15:00:00"
+    assert result["target_coverage_met"] is True
+
+
+def test_failed_refresh_preserves_existing_cache(monkeypatch, tmp_path):
+    service = load_service()
+    target = tmp_path / "Minute_600519_30.csv"
+    target.write_text("existing-cache", encoding="utf-8")
+    monkeypatch.setattr(
+        "app.services.minute_data_service.DATA_DIR", tmp_path
+    )
+    monkeypatch.setattr(
+        "app.services.minute_data_service.download_minute_data",
+        lambda code, period: (_ for _ in ()).throw(
+            ValueError("all providers failed")
+        ),
+    )
+
+    with pytest.raises(ValueError, match="all providers failed"):
+        service.refresh_minute_data("600519", "30")
+
+    assert target.read_text(encoding="utf-8") == "existing-cache"
