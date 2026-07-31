@@ -121,6 +121,54 @@ def test_minute_period_uses_timestamp_column(monkeypatch):
     assert result["response_to"] == frame["时间"].iloc[-1]
 
 
+def test_minute_date_only_end_includes_selected_calendar_day(monkeypatch):
+    frame = make_chan_frame(40, with_time=True)
+    metadata = {
+        "coverage_from": frame["时间"].iloc[0],
+        "coverage_to": frame["时间"].iloc[-1],
+        "data_source": "baostock",
+        "target_coverage_met": True,
+    }
+    monkeypatch.setattr(
+        "app.services.chan_service.load_minute_data",
+        lambda code, period: (frame, metadata),
+    )
+
+    result = analyze_chan(
+        "600519",
+        "2026-07-01",
+        "2026-07-01",
+        period="5",
+    )
+
+    assert result["dates"] == frame["时间"].tolist()
+    assert result["response_to"] == "2026-07-01 12:45:00"
+
+
+def test_minute_timestamp_end_remains_exact(monkeypatch):
+    frame = make_chan_frame(40, with_time=True)
+    metadata = {
+        "coverage_from": frame["时间"].iloc[0],
+        "coverage_to": frame["时间"].iloc[-1],
+        "data_source": "baostock",
+        "target_coverage_met": True,
+    }
+    monkeypatch.setattr(
+        "app.services.chan_service.load_minute_data",
+        lambda code, period: (frame, metadata),
+    )
+
+    result = analyze_chan(
+        "600519",
+        "2026-07-01 09:30:00",
+        "2026-07-01 10:20:00",
+        period="5",
+    )
+
+    assert result["dates"] == frame["时间"].iloc[:11].tolist()
+    assert result["response_to"] == "2026-07-01 10:20:00"
+
+
 def test_oversized_response_requires_smaller_range(monkeypatch):
     frame = make_chan_frame(20_001, with_time=True)
     metadata = {

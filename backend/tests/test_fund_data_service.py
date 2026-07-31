@@ -337,3 +337,93 @@ def test_load_fund_data_downloads_when_cache_missing(monkeypatch, tmp_path):
     assert (tmp_path / "Fund_000001.csv").exists()
     assert result["日期"].tolist() == ["2024-01-04", "2024-01-05"]
     assert result["基金代码"].tolist() == ["000001", "000001"]
+
+
+def test_load_existing_cache_validates_eligibility_and_preserves_leading_zero_code(
+    monkeypatch,
+    tmp_path,
+):
+    cached = pd.DataFrame({
+        "日期": ["2024-01-04", "2024-01-05"],
+        "基金代码": ["000001", "000001"],
+        "基金名称": ["示例基金", "示例基金"],
+        "基金类型": ["混合型", "混合型"],
+        "单位净值": [1.0, 1.1],
+        "日增长率": [0.0, 10.0],
+        "每份分红": [0.0, 0.0],
+        "拆分类型": ["", ""],
+        "拆分折算比例": [1.0, 1.0],
+    })
+    cached.to_csv(
+        tmp_path / "Fund_000001.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    metadata_calls = []
+    listing_calls = []
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+
+    def fake_fund_name_em():
+        metadata_calls.append(True)
+        return pd.DataFrame({
+            "基金代码": [1],
+            "基金简称": ["示例基金"],
+            "基金类型": ["混合型"],
+        })
+
+    def fake_fund_etf_fund_daily_em():
+        listing_calls.append(True)
+        return pd.DataFrame({"基金代码": [510300]})
+
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_name_em",
+        fake_fund_name_em,
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        fake_fund_etf_fund_daily_em,
+    )
+
+    result = load_fund_data("000001")
+
+    assert result["基金代码"].tolist() == ["000001", "000001"]
+    assert len(metadata_calls) == 1
+    assert len(listing_calls) == 1
+
+
+def test_load_existing_cache_fails_closed_on_malformed_exchange_listing(
+    monkeypatch,
+    tmp_path,
+):
+    cached = pd.DataFrame({
+        "日期": ["2024-01-05"],
+        "基金代码": ["000001"],
+        "基金名称": ["示例基金"],
+        "基金类型": ["混合型"],
+        "单位净值": [1.0],
+        "日增长率": [0.0],
+        "每份分红": [0.0],
+        "拆分类型": [""],
+        "拆分折算比例": [1.0],
+    })
+    target = tmp_path / "Fund_000001.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    expected_cache = target.read_bytes()
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_name_em",
+        lambda: pd.DataFrame({
+            "基金代码": ["000001"],
+            "基金简称": ["示例基金"],
+            "基金类型": ["混合型"],
+        }),
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: pd.DataFrame(),
+    )
+
+    with pytest.raises(ValueError, match="场内ETF列表不能为空"):
+        load_fund_data("000001")
+
+    assert target.read_bytes() == expected_cache

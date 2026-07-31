@@ -163,11 +163,16 @@ def _fetch_fund_metadata(code: str) -> dict:
     }
 
 
-def _download_normalized_fund_data(code: str) -> pd.DataFrame:
+def _validate_fund_eligibility(code: str) -> dict:
     metadata = _fetch_fund_metadata(code)
     _validate_supported_type(metadata["基金类型"])
     if code in _fetch_exchange_listed_fund_codes():
         raise ValueError(f"不支持场内ETF基金: {code}")
+    return metadata
+
+
+def _download_normalized_fund_data(code: str) -> pd.DataFrame:
+    metadata = _validate_fund_eligibility(code)
     nav = ak.fund_open_fund_info_em(symbol=code, indicator="单位净值走势")
     dividends = ak.fund_open_fund_info_em(symbol=code, indicator="分红送配详情")
     splits = ak.fund_open_fund_info_em(symbol=code, indicator="拆分详情")
@@ -237,4 +242,6 @@ def load_fund_data(fund_code: str) -> pd.DataFrame:
         df = _download_normalized_fund_data(code)
         _require_history_rows(df)
         _atomic_write_csv(df, target)
+    else:
+        _validate_fund_eligibility(code)
     return _read_fund_csv(target)

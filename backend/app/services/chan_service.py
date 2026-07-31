@@ -1,6 +1,7 @@
 """
 缠论 analysis orchestration.
 """
+import re
 from typing import Optional
 import pandas as pd
 from app.core.chan import Bar, merge_kbars, detect_fractals, detect_pens
@@ -41,6 +42,8 @@ def analyze_chan(
     timestamps = pd.to_datetime(frame["时间"], errors="raise")
     start_ts = pd.Timestamp(start_date)
     end_ts = pd.Timestamp(end_date)
+    if period != "daily" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(end_date).strip()):
+        end_ts += pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
     df = frame.loc[(timestamps >= start_ts) & (timestamps <= end_ts)].reset_index(drop=True)
     if len(df) < 10:
         raise ValueError(f"数据不足，仅 {len(df)} 行（需至少 10 行）")

@@ -25,8 +25,12 @@ const Header: React.FC<HeaderProps> = ({
   const placeholder = mode === 'fund'
     ? '输入基金代码，如 000001'
     : '输入股票/ETF代码，如 600519'
+  const controlsLocked = loading || refreshing
 
   const handleSubmit = () => {
+    if (controlsLocked) {
+      return
+    }
     if (!value.trim()) {
       message.warning(`请先输入${assetLabel}代码`)
       return
@@ -35,6 +39,9 @@ const Header: React.FC<HeaderProps> = ({
   }
 
   const handleRefresh = async () => {
+    if (controlsLocked) {
+      return
+    }
     if (!value.trim()) {
       message.warning(`请先输入${assetLabel}代码`)
       return
@@ -50,6 +57,7 @@ const Header: React.FC<HeaderProps> = ({
         value={value}
         onChange={e => onValueChange(e.target.value)}
         onPressEnter={handleSubmit}
+        disabled={controlsLocked}
         style={{ width: 260, background: '#21262d', borderColor: '#30363d', color: '#e6edf3' }}
         allowClear
       />
@@ -57,7 +65,7 @@ const Header: React.FC<HeaderProps> = ({
         type="primary"
         icon={loading ? <Spin size="small" /> : <SearchOutlined />}
         onClick={handleSubmit}
-        disabled={loading || refreshing}
+        disabled={controlsLocked}
         style={{ background: '#238636', borderColor: '#238636' }}
       >
         分析
@@ -65,7 +73,7 @@ const Header: React.FC<HeaderProps> = ({
       <Button
         icon={refreshing ? <Spin size="small" /> : <SyncOutlined />}
         onClick={handleRefresh}
-        disabled={loading || refreshing}
+        disabled={controlsLocked}
         style={{ borderColor: '#30363d', color: '#8b949e' }}
       >
         刷新数据

@@ -79,6 +79,18 @@ def test_cached_000001_analysis_code_can_round_trip_into_backtest(monkeypatch, t
         encoding="utf-8-sig",
     )
     monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_name_em",
+        lambda: pd.DataFrame({
+            "基金代码": ["000001"],
+            "基金简称": ["示例基金"],
+            "基金类型": ["混合型"],
+        }),
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: pd.DataFrame({"基金代码": ["510300"]}),
+    )
 
     analysis_response = post_json("/api/fund/analysis", {"fund_code": "000001"})
     assert analysis_response.status_code == 200
@@ -95,6 +107,75 @@ def test_cached_000001_analysis_code_can_round_trip_into_backtest(monkeypatch, t
     assert analysis["fund_code"] == "000001"
     assert backtest_response.status_code == 200
     assert backtest_response.json()["fund_code"] == "000001"
+
+
+def test_existing_exchange_etf_cache_is_rejected_before_analysis(monkeypatch, tmp_path):
+    cached = make_fund_df()
+    cached["基金代码"] = "510300"
+    cached["基金名称"] = "沪深300ETF"
+    cached["基金类型"] = "指数型-股票"
+    target = tmp_path / "Fund_510300.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    expected_cache = target.read_bytes()
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_name_em",
+        lambda: pd.DataFrame({
+            "基金代码": ["510300"],
+            "基金简称": ["沪深300ETF"],
+            "基金类型": ["指数型-股票"],
+        }),
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: pd.DataFrame({"基金代码": ["510300"]}),
+    )
+
+    response = post_json("/api/fund/analysis", {"fund_code": "510300"})
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "不支持场内ETF基金: 510300"
+    assert target.read_bytes() == expected_cache
+
+
+def test_existing_unsupported_type_cache_is_rejected_before_backtest(
+    monkeypatch,
+    tmp_path,
+):
+    cached = make_fund_df()
+    cached["基金代码"] = "000009"
+    cached["基金名称"] = "示例货币基金"
+    cached["基金类型"] = "货币型"
+    target = tmp_path / "Fund_000009.csv"
+    cached.to_csv(target, index=False, encoding="utf-8-sig")
+    expected_cache = target.read_bytes()
+    monkeypatch.setattr("app.services.fund_data_service.DATA_DIR", tmp_path)
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_name_em",
+        lambda: pd.DataFrame({
+            "基金代码": ["000009"],
+            "基金简称": ["示例货币基金"],
+            "基金类型": ["货币型"],
+        }),
+    )
+    monkeypatch.setattr(
+        "app.services.fund_data_service.ak.fund_etf_fund_daily_em",
+        lambda: (_ for _ in ()).throw(
+            AssertionError("unsupported type should reject before ETF listing")
+        ),
+    )
+
+    response = post_json("/api/fund/backtest", {
+        "fund_code": "000009",
+        "strategy_name": "weekly_investment",
+        "start_date": "2024-01-01",
+        "weekday": 5,
+        "amount": 1000,
+    })
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "不支持基金类型: 货币型"
+    assert target.read_bytes() == expected_cache
 
 
 def test_fund_backtest_rejects_invalid_weekday():
