@@ -57,6 +57,30 @@ def _empty_minute_frame() -> pd.DataFrame:
     return pd.DataFrame(columns=MINUTE_COLUMNS)
 
 
+def _validate_baostock_metadata(raw: pd.DataFrame, requested_code: str) -> None:
+    expected_code = normalize_minute_code(requested_code)
+
+    def normalize_provider_code(value: object) -> str:
+        try:
+            return normalize_minute_code(str(value).strip())
+        except ValueError as exc:
+            raise ValueError(f"BaoStock分钟数据代码无效: {value!r}") from exc
+
+    provider_codes = raw["code"].map(normalize_provider_code)
+    mismatched_codes = raw.loc[provider_codes != expected_code, "code"].drop_duplicates().tolist()
+    if mismatched_codes:
+        raise ValueError(
+            f"BaoStock分钟数据代码与请求代码不一致: 期望 {expected_code}, 实际 {mismatched_codes}"
+        )
+
+    adjustflags = raw["adjustflag"].fillna("").map(lambda value: str(value).strip())
+    invalid_adjustflags = raw.loc[adjustflags != "2", "adjustflag"].fillna("").drop_duplicates().tolist()
+    if invalid_adjustflags:
+        raise ValueError(
+            f"BaoStock分钟数据复权标记必须全部为前复权(2): 实际 {invalid_adjustflags}"
+        )
+
+
 def _validate_price_rows(df: pd.DataFrame) -> None:
     finite_mask = df.loc[:, _PRICE_COLUMNS].apply(lambda column: column.map(math.isfinite))
     if not finite_mask.all().all():
@@ -99,6 +123,7 @@ def normalize_baostock_minutes(rows: list[list[str]], code: str, period: str) ->
         return _empty_minute_frame()
 
     raw = pd.DataFrame(rows, columns=_BAOSTOCK_COLUMNS)
+    _validate_baostock_metadata(raw, requested_code=code)
     result = raw.rename(columns={
         "open": "开盘",
         "high": "最高",

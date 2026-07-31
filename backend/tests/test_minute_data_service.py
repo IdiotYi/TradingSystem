@@ -95,6 +95,29 @@ def test_normalize_baostock_minutes_sorts_and_deduplicates_by_timestamp():
     ]
 
 
+def test_normalize_baostock_minutes_rejects_rows_for_a_different_code():
+    service = load_service()
+    rows = [[
+        "2026-07-29", "20260729150000000", "sz.000001",
+        "1319.8", "1325", "1319", "1321", "148791", "196561700", "2",
+    ]]
+
+    with pytest.raises(ValueError, match="代码.*不一致"):
+        service.normalize_baostock_minutes(rows, code="600519", period="5")
+
+
+@pytest.mark.parametrize("adjustflag", ["1", "3", ""])
+def test_normalize_baostock_minutes_rejects_non_qfq_adjustflag(adjustflag):
+    service = load_service()
+    rows = [[
+        "2026-07-29", "20260729150000000", "sh.600519",
+        "1319.8", "1325", "1319", "1321", "148791", "196561700", adjustflag,
+    ]]
+
+    with pytest.raises(ValueError, match="复权.*2"):
+        service.normalize_baostock_minutes(rows, code="600519", period="5")
+
+
 @pytest.mark.parametrize(
     "rows",
     [
