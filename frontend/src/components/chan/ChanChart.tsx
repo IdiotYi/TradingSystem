@@ -10,6 +10,14 @@ interface Props {
 const ChanChart: React.FC<Props> = ({ data }) => {
   const option = useMemo(() => {
     const { dates, open, high, low, close, pens } = data
+    const period = (data as ChanResponse & { period: 'daily' | 'intraday' }).period
+    const formatAxisLabel = (value: string) => {
+      if (period === 'daily') return value.slice(0, 7)
+      return value.slice(5, 16)
+    }
+
+    const formatTooltipDate = (value: string) =>
+      period === 'daily' ? value.slice(0, 10) : value.slice(0, 16)
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
@@ -58,7 +66,7 @@ const ChanChart: React.FC<Props> = ({ data }) => {
             const c = close[idx] ?? 0
             const o = open[idx] ?? 0
             const upDownColor = c >= o ? '#ef5350' : '#26a69a'
-            let html = `<div style="font-weight:600;margin-bottom:4px">${dates[idx]}</div>`
+            let html = `<div style="font-weight:600;margin-bottom:4px">${formatTooltipDate(dates[idx])}</div>`
             html += `<div>开 <b>${o.toFixed(priceDecimals)}</b>　高 <b>${(high[idx] ?? 0).toFixed(priceDecimals)}</b></div>`
             html += `<div>低 <b>${(low[idx] ?? 0).toFixed(priceDecimals)}</b>　收 <b style="color:${upDownColor}">${c.toFixed(priceDecimals)}</b></div>`
             return html
@@ -69,7 +77,7 @@ const ChanChart: React.FC<Props> = ({ data }) => {
             const dirLabel = meta.direction === 'up' ? '上升笔' : '下降笔'
             const dirColor = meta.direction === 'up' ? '#ef5350' : '#26a69a'
             return (
-              `<div style="font-weight:600;margin-bottom:4px">${meta.date}</div>` +
+              `<div style="font-weight:600;margin-bottom:4px">${formatTooltipDate(meta.date)}</div>` +
               `<div>价格: <b>${Number(meta.price).toFixed(priceDecimals)}</b></div>` +
               `<div>方向: <b style="color:${dirColor}">${dirLabel}</b></div>`
             )
@@ -84,8 +92,8 @@ const ChanChart: React.FC<Props> = ({ data }) => {
         boundaryGap: true,
         axisLabel: {
           color: '#8b949e',
-          formatter: (v: string) => v.slice(0, 7),
-          interval: Math.floor(dates.length / 8),
+          formatter: (v: string) => formatAxisLabel(v),
+          interval: Math.max(0, Math.floor(dates.length / 8) - 1),
         },
         axisLine: { lineStyle: { color: '#30363d' } },
       },
