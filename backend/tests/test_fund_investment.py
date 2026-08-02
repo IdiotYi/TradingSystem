@@ -1,7 +1,11 @@
+from decimal import Decimal
+
 import pandas as pd
 import pytest
 
+from app.core import fund_investment
 from app.core.fund_investment import (
+    run_smart_dip_investment,
     run_weekly_investment,
     select_weekly_investment_dates,
 )
@@ -13,9 +17,11 @@ def make_fund_df(rows):
     frame["基金名称"] = "示例基金"
     frame["基金类型"] = "混合型"
     frame["日增长率"] = 0.0
-    frame["每份分红"] = frame.get("每份分红", 0.0)
-    frame["拆分类型"] = frame.get("拆分类型", "")
-    frame["拆分折算比例"] = frame.get("拆分折算比例", 1.0)
+    frame["每份分红"] = [row.get("每份分红", 0.0) for row in rows]
+    frame["拆分类型"] = [row.get("拆分类型", "") for row in rows]
+    frame["拆分折算比例"] = [
+        row.get("拆分折算比例", 1.0) for row in rows
+    ]
     return frame
 
 
@@ -231,6 +237,18 @@ def test_empty_data_is_rejected():
         )
 
 
+def test_empty_data_is_rejected_before_amount_validation():
+    empty = make_fund_df([]).reindex(columns=[
+        "日期", "单位净值", "基金代码", "基金名称", "基金类型",
+        "日增长率", "每份分红", "拆分类型", "拆分折算比例",
+    ])
+
+    with pytest.raises(ValueError, match="不能为空"):
+        run_weekly_investment(
+            empty, start_date="2024-01-01", weekday=5, amount=0.0
+        )
+
+
 def test_non_positive_amount_is_rejected():
     df = make_fund_df([
         {"日期": "2024-01-05", "单位净值": 1.0},
@@ -262,3 +280,239 @@ def test_invalid_weekday_is_rejected():
         run_weekly_investment(
             df, start_date="2024-01-01", weekday=0, amount=100.0
         )
+
+
+def test_smart_signal_index_adjusts_dividend_and_split():
+    df = make_fund_df([
+        {
+            "日期": "2024-01-05",
+            "单位净值": 1.0,
+            "每份分红": 0.0,
+            "拆分折算比例": 1.0,
+        },
+        {
+            "日期": "2024-01-12",
+            "单位净值": 0.45,
+            "每份分红": 0.05,
+            "拆分折算比例": 2.0,
+        },
+    ])
+
+    result = run_smart_dip_investment(
+        df, start_date="2024-01-01", weekday=5, amount=1000
+    )
+
+    assert result["signal_index_series"] == pytest.approx([1.0, 1.0])
+
+
+@pytest.mark.parametrize(
+    ("drawdown", "multiplier", "reuse_cash"),
+    [
+        ("-0.5000", "5.0", True),
+        ("-0.4999", "3.0", True),
+        ("-0.4500", "3.0", True),
+        ("-0.4499", "0.5", False),
+        ("-0.4000", "0.5", False),
+        ("-0.3999", "0", False),
+    ],
+)
+def test_smart_buy_tiers_are_exact(drawdown, multiplier, reuse_cash):
+    actual_multiplier, actual_reuse = fund_investment._smart_buy_rule(
+        Decimal(drawdown)
+    )
+    assert actual_multiplier == Decimal(multiplier)
+    assert actual_reuse is reuse_cash
+
+
+def test_weekly_wilder_rsi_uses_only_available_values():
+    result = fund_investment._weekly_wilder_rsi(
+        [Decimal(value) for value in ("1", "2", "3", "2")],
+        period=3,
+    )
+
+    assert result == pytest.approx(Decimal("66.66666666666666666666666667"))
+
+
+def test_smart_strategy_uses_previous_week_signal_not_execution_nav():
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 1.00},
+        {"日期": "2024-01-12", "单位净值": 0.95},
+        {"日期": "2024-01-19", "单位净值": 0.55},
+        {"日期": "2024-01-26", "单位净值": 0.56},
+    ])
+
+    result = run_smart_dip_investment(
+        df, start_date="2024-01-01", weekday=5, amount=1000
+    )
+
+    buys = [e for e in result["events"] if e["event_type"] == "smart_buy"]
+    assert [event["date"] for event in buys] == ["2024-01-26"]
+    assert buys[0]["signal_date"] == "2024-01-19"
+
+
+def test_smart_strategy_reuses_sale_cash_without_recounting_it(monkeypatch):
+    monkeypatch.setattr(
+        fund_investment,
+        "_weekly_wilder_rsi",
+        lambda values, period=14: Decimal("100"),
+    )
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 1.0},
+        {"日期": "2024-01-12", "单位净值": 0.5},
+        {"日期": "2024-01-19", "单位净值": 1.0},
+        {"日期": "2024-01-26", "单位净值": 2.0},
+        {"日期": "2024-02-02", "单位净值": 2.0},
+        {"日期": "2024-02-09", "单位净值": 1.1},
+        {"日期": "2024-02-16", "单位净值": 1.1},
+    ])
+
+    result = run_smart_dip_investment(
+        df, start_date="2024-01-01", weekday=5, amount=1000
+    )
+
+    buys = [e for e in result["events"] if e["event_type"] == "smart_buy"]
+    sells = [e for e in result["events"] if e["event_type"] == "smart_sell"]
+    first_sell = sells[0]
+    second_buy = buys[1]
+    sale_index = result["dates"].index(first_sell["date"])
+
+    assert result["summary"]["total_invested"] == 8000.0
+    assert result["summary"]["total_sale_proceeds"] > 0
+    assert result["summary"]["cash_balance"] == 0.0
+    assert result["asset_value_series"][sale_index] == pytest.approx(
+        first_sell["proceeds"]
+    )
+    assert second_buy["reused_cash"] == first_sell["proceeds"]
+    assert second_buy["contribution_amount"] == 3000.0
+    assert second_buy["purchase_amount"] == pytest.approx(
+        second_buy["contribution_amount"] + second_buy["reused_cash"]
+    )
+
+
+def test_smart_sell_has_priority_and_fully_liquidates(monkeypatch):
+    monkeypatch.setattr(
+        fund_investment,
+        "_weekly_wilder_rsi",
+        lambda values, period=14: Decimal("100"),
+    )
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 100.0},
+        {"日期": "2024-01-12", "单位净值": 40.0},
+        {"日期": "2024-01-19", "单位净值": 1.0},
+        {"日期": "2024-01-26", "单位净值": 40.0},
+        {"日期": "2024-02-02", "单位净值": 40.0},
+    ])
+
+    result = run_smart_dip_investment(
+        df, start_date="2024-01-01", weekday=5, amount=1000
+    )
+
+    sell_event = next(
+        event
+        for event in result["events"]
+        if event["event_type"] == "smart_sell"
+    )
+    assert sell_event["sold_shares"] == pytest.approx(
+        sell_event["shares_before"]
+    )
+    assert sell_event["shares_after"] == 0.0
+    assert not any(
+        event["event_type"] == "smart_buy"
+        and event["date"] == sell_event["date"]
+        for event in result["events"]
+    )
+
+
+def test_smart_strategy_returns_zero_result_when_drawdown_never_reaches_40_percent():
+    rows = [
+        {
+            "日期": timestamp.strftime("%Y-%m-%d"),
+            "单位净值": 1.0 + index * 0.01,
+        }
+        for index, timestamp in enumerate(
+            pd.date_range("2024-01-05", periods=16, freq="7D")
+        )
+    ]
+    result = run_smart_dip_investment(
+        make_fund_df(rows),
+        start_date="2024-01-01",
+        weekday=5,
+        amount=1000,
+    )
+    assert result["summary"]["total_invested"] == 0.0
+    assert result["summary"]["total_return"] == 0.0
+    assert result["summary"]["buy_count"] == 0
+    assert result["summary"]["sell_count"] == 0
+
+
+@pytest.mark.parametrize("bad_nav", [0, -1, float("nan"), float("inf")])
+def test_smart_strategy_rejects_invalid_nav(bad_nav):
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 1.0},
+        {"日期": "2024-01-12", "单位净值": bad_nav},
+    ])
+    with pytest.raises(ValueError, match="单位净值"):
+        run_smart_dip_investment(
+            df,
+            start_date="2024-01-01",
+            weekday=5,
+            amount=1000,
+        )
+
+
+@pytest.mark.parametrize("bad_split", [0, -1, float("nan"), float("inf")])
+def test_smart_strategy_rejects_invalid_split_ratio(bad_split):
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 1.0},
+        {
+            "日期": "2024-01-12",
+            "单位净值": 1.0,
+            "拆分折算比例": bad_split,
+        },
+    ])
+    with pytest.raises(ValueError, match="拆分折算比例"):
+        run_smart_dip_investment(
+            df,
+            start_date="2024-01-01",
+            weekday=5,
+            amount=1000,
+        )
+
+
+@pytest.mark.parametrize(
+    "bad_amount",
+    [0, -1, float("nan"), float("inf")],
+)
+def test_smart_strategy_rejects_invalid_base_amount(bad_amount):
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 1.0},
+    ])
+    with pytest.raises(ValueError, match="amount"):
+        run_smart_dip_investment(
+            df,
+            start_date="2024-01-01",
+            weekday=5,
+            amount=bad_amount,
+        )
+
+
+def test_weekly_strategy_adds_compatible_unified_fields():
+    df = make_fund_df([
+        {"日期": "2024-01-05", "单位净值": 1.0},
+        {"日期": "2024-01-12", "单位净值": 1.1},
+    ])
+
+    result = run_weekly_investment(
+        df, start_date="2024-01-01", weekday=5, amount=100.0
+    )
+
+    summary = result["summary"]
+    assert summary["decision_count"] == summary["investment_count"] == 2
+    assert summary["buy_count"] == summary["investment_count"]
+    assert summary["sell_count"] == 0
+    assert summary["fund_value"] == summary["current_value"]
+    assert summary["cash_balance"] == 0.0
+    assert summary["total_sale_proceeds"] == 0.0
+    assert summary["realized_profit"] == 0.0
+    assert result["cash_balance_series"] == [0.0, 0.0]
+    assert result["signal_index_series"] == pytest.approx([1.0, 1.1])
