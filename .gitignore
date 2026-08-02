@@ -27,3 +27,6 @@ frontend/dist/
 
 # Isolated feature worktrees
 .worktrees/
+
+# Superpowers task artifacts
+.superpowers/sdd/*
