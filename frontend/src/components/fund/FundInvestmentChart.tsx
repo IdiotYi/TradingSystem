@@ -14,7 +14,7 @@ const FundInvestmentChart: React.FC<Props> = ({ data }) => {
     backgroundColor: '#0d1117',
     animation: false,
     legend: {
-      data: ['累计投入', '资产市值'],
+      data: ['累计投入', '资产市值', '现金余额'],
       top: 8,
       textStyle: { color: '#8b949e' },
       inactiveColor: '#444',
@@ -86,6 +86,13 @@ const FundInvestmentChart: React.FC<Props> = ({ data }) => {
         data: data.asset_value_series,
         showSymbol: false,
         lineStyle: { color: '#58a6ff', width: 2 },
+      },
+      {
+        name: '现金余额',
+        type: 'line',
+        data: data.cash_balance_series,
+        showSymbol: false,
+        lineStyle: { color: '#a371f7', width: 2 },
       },
     ],
   }), [data])

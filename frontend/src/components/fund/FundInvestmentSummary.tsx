@@ -18,7 +18,7 @@ const FundInvestmentSummary: React.FC<Props> = ({ summary }) => {
 
   const items = [
     { title: '累计投入', value: cny(summary.total_invested), color: '#faad14' },
-    { title: '当前市值', value: cny(summary.current_value), color: '#58a6ff' },
+    { title: '组合价值', value: cny(summary.current_value), color: '#58a6ff' },
     {
       title: '累计盈亏',
       value: cny(summary.total_profit),
@@ -31,14 +31,16 @@ const FundInvestmentSummary: React.FC<Props> = ({ summary }) => {
       color: positive(summary.total_return) ? '#ef5350' : '#26a69a',
       icon: positive(summary.total_return) ? <ArrowUpOutlined /> : <ArrowDownOutlined />,
     },
-    { title: '定投次数', value: summary.investment_count.toLocaleString('zh-CN'), color: '#1890ff' },
+    { title: '买入次数', value: summary.buy_count.toLocaleString('zh-CN'), color: '#1890ff' },
+    { title: '卖出次数', value: summary.sell_count.toLocaleString('zh-CN'), color: '#52c41a' },
+    { title: '现金余额', value: cny(summary.cash_balance), color: '#a371f7' },
     { title: '期末份额', value: shares(summary.final_shares), color: '#e6edf3' },
   ]
 
   return (
     <Row gutter={[16, 16]} style={{ marginTop: 16, marginBottom: 16 }}>
       {items.map(item => (
-        <Col xs={24} sm={12} md={8} xl={4} key={item.title}>
+        <Col xs={24} sm={12} md={8} xl={6} key={item.title}>
           <Card size="small" style={{ background: '#161b22', border: '1px solid #30363d' }}>
             <Statistic
               title={<span style={{ color: '#8b949e', fontSize: 12 }}>{item.title}</span>}

@@ -1,8 +1,12 @@
 import React, { useEffect } from 'react'
-import { Button, DatePicker, Form, InputNumber, Select, Spin } from 'antd'
+import { Alert, Button, DatePicker, Form, InputNumber, Select, Spin } from 'antd'
 import { PlayCircleOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
-import type { FundAnalysisResponse, FundBacktestRequest } from '../../types/fund'
+import type {
+  FundAnalysisResponse,
+  FundBacktestRequest,
+  FundStrategyName,
+} from '../../types/fund'
 
 const WEEKDAYS = [
   { value: 1, label: '周一' },
@@ -11,6 +15,14 @@ const WEEKDAYS = [
   { value: 4, label: '周四' },
   { value: 5, label: '周五' },
 ]
+
+const STRATEGIES = [
+  { value: 'weekly_investment', label: '每周定投' },
+  { value: 'smart_dip_investment', label: '智能定投' },
+] satisfies Array<{
+  value: FundStrategyName
+  label: string
+}>
 
 interface FundInvestmentFormValues {
   strategy_name: FundBacktestRequest['strategy_name']
@@ -28,6 +40,7 @@ interface Props {
 
 const FundInvestmentConfig: React.FC<Props> = ({ fundCode, analysis, onRun, loading }) => {
   const [form] = Form.useForm<FundInvestmentFormValues>()
+  const strategyName = Form.useWatch('strategy_name', form) ?? 'weekly_investment'
 
   useEffect(() => {
     form.setFieldsValue({
@@ -77,13 +90,13 @@ const FundInvestmentConfig: React.FC<Props> = ({ fundCode, analysis, onRun, load
         rules={[{ required: true, message: '请选择策略' }]}
       >
         <Select
-          options={[{ value: 'weekly_investment', label: '每周定投' }]}
+          options={STRATEGIES}
           style={{ width: 140 }}
           disabled={loading}
         />
       </Form.Item>
       <Form.Item
-        label="定投日"
+        label={strategyName === 'smart_dip_investment' ? '决策日' : '定投日'}
         name="weekday"
         rules={[{ required: true, message: '请选择定投日' }]}
       >
@@ -128,9 +141,18 @@ const FundInvestmentConfig: React.FC<Props> = ({ fundCode, analysis, onRun, load
           disabled={loading}
           style={{ background: '#238636', borderColor: '#238636' }}
         >
-          运行定投回测
+          {strategyName === 'smart_dip_investment' ? '运行智能回测' : '运行定投回测'}
         </Button>
       </Form.Item>
+      {strategyName === 'smart_dip_investment' && (
+        <div style={{ width: '100%', marginTop: 8 }}>
+          <Alert
+            type="info"
+            showIcon
+            message="信号严格滞后一周：回撤 40%/45%/50% 分层买入；持仓收益达到 90% 且周 RSI(14) ≥ 70 时清仓。历史回测不代表未来收益。"
+          />
+        </div>
+      )}
     </Form>
   )
 }
