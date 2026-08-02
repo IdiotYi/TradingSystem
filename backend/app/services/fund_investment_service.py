@@ -1,4 +1,7 @@
-from app.core.fund_investment import run_weekly_investment
+from app.core.fund_investment import (
+    run_smart_dip_investment,
+    run_weekly_investment,
+)
 from app.services.fund_data_service import load_fund_data, refresh_fund_data
 
 
@@ -28,11 +31,15 @@ def run_fund_backtest(
     weekday: int,
     amount: float,
 ) -> dict:
-    if strategy_name != "weekly_investment":
+    if strategy_name == "weekly_investment":
+        strategy = run_weekly_investment
+    elif strategy_name == "smart_dip_investment":
+        strategy = run_smart_dip_investment
+    else:
         raise ValueError(f"不支持的基金定投策略: {strategy_name}")
 
     df = load_fund_data(fund_code)
-    result = run_weekly_investment(df, start_date, weekday, amount)
+    result = strategy(df, start_date, weekday, amount)
     return {
         "success": True,
         "fund_code": str(df["基金代码"].iloc[0]),

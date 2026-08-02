@@ -190,7 +190,14 @@ def test_fund_backtest_rejects_invalid_weekday():
     assert response.status_code == 422
 
 
-def test_fund_backtest_invalid_strategy_maps_to_400():
+def test_fund_backtest_invalid_strategy_maps_to_400(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.fund_investment_service.load_fund_data",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("invalid strategy should reject before loading data")
+        ),
+    )
+
     response = post_json("/api/fund/backtest", {
         "fund_code": "000001",
         "strategy_name": "monthly_investment",
@@ -318,6 +325,42 @@ def test_run_fund_backtest_wraps_core_result(monkeypatch):
         "return_series": [0.1],
         "events": [],
     }
+
+
+def test_smart_strategy_dispatches_through_api(monkeypatch):
+    expected = {
+        "summary": {
+            "total_return": 1.01,
+            "buy_count": 46,
+            "sell_count": 1,
+        },
+        "dates": [],
+        "total_invested_series": [],
+        "asset_value_series": [],
+        "cash_balance_series": [],
+        "return_series": [],
+        "signal_index_series": [],
+        "events": [],
+    }
+    monkeypatch.setattr(
+        "app.services.fund_investment_service.load_fund_data",
+        lambda code: make_fund_df(),
+    )
+    monkeypatch.setattr(
+        "app.services.fund_investment_service.run_smart_dip_investment",
+        lambda df, start_date, weekday, amount: expected,
+    )
+
+    response = post_json("/api/fund/backtest", {
+        "fund_code": "000001",
+        "strategy_name": "smart_dip_investment",
+        "start_date": "2024-01-01",
+        "weekday": 5,
+        "amount": 1000,
+    })
+
+    assert response.status_code == 200
+    assert response.json()["summary"]["sell_count"] == 1
 
 
 def test_run_fund_backtest_rejects_unsupported_strategy():
