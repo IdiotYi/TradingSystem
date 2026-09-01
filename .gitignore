@@ -11,8 +11,11 @@ build/
 venv/
 .env
 
-# Data cache (downloaded at runtime)
+# Local-only project artifacts
+.claude/
+.superpowers/
 data/
+docs/
 
 # Logs
 *.log
@@ -27,6 +30,3 @@ frontend/dist/
 
 # Isolated feature worktrees
 .worktrees/
-
-# Superpowers task artifacts
-.superpowers/sdd/*
