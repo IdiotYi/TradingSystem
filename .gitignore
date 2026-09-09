@@ -15,7 +15,6 @@ venv/
 .claude/
 .superpowers/
 data/
-docs/
 
 # Logs
 *.log
