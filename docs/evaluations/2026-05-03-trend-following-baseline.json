@@ -1,0 +1,1021 @@
+{
+  "periods": {
+    "train": {
+      "start": "2021-01-01",
+      "end": "2023-12-31"
+    },
+    "out_of_sample": {
+      "start": "2024-01-01",
+      "end": "2025-12-31"
+    }
+  },
+  "strategies": [
+    "buy_and_hold",
+    "three_factors",
+    "supertrend_ma",
+    "trend_pullback_maw_macd",
+    "trend_following_maw_macd"
+  ],
+  "results": [
+    {
+      "code": "000565",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.3386,
+      "max_drawdown": -0.41807371081738787,
+      "trade_count": 1
+    },
+    {
+      "code": "000565",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.0782,
+      "max_drawdown": -0.12493868998933175,
+      "trade_count": 11
+    },
+    {
+      "code": "000565",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.027,
+      "max_drawdown": -0.12795306324320121,
+      "trade_count": 54
+    },
+    {
+      "code": "000565",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.2832,
+      "max_drawdown": -0.29987891799241584,
+      "trade_count": 41
+    },
+    {
+      "code": "000565",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.2292,
+      "max_drawdown": -0.3402156171946097,
+      "trade_count": 37
+    },
+    {
+      "code": "000565",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.1475,
+      "max_drawdown": -0.488610308436281,
+      "trade_count": 1
+    },
+    {
+      "code": "000565",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.1049,
+      "max_drawdown": -0.12069699999999997,
+      "trade_count": 9
+    },
+    {
+      "code": "000565",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.1378,
+      "max_drawdown": -0.13802100000000006,
+      "trade_count": 38
+    },
+    {
+      "code": "000565",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.1669,
+      "max_drawdown": -0.16891534859965096,
+      "trade_count": 15
+    },
+    {
+      "code": "000565",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.1863,
+      "max_drawdown": -0.32833550671990896,
+      "trade_count": 14
+    },
+    {
+      "code": "000858",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": -0.3885,
+      "max_drawdown": -0.47745712137186597,
+      "trade_count": 1
+    },
+    {
+      "code": "000858",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.3137,
+      "max_drawdown": -0.0910852342170146,
+      "trade_count": 12
+    },
+    {
+      "code": "000858",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.1123,
+      "max_drawdown": -0.20218806671780012,
+      "trade_count": 47
+    },
+    {
+      "code": "000858",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.1674,
+      "max_drawdown": -0.23321962754967623,
+      "trade_count": 17
+    },
+    {
+      "code": "000858",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.1773,
+      "max_drawdown": -0.2649775347141846,
+      "trade_count": 16
+    },
+    {
+      "code": "000858",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": -0.1322,
+      "max_drawdown": -0.3034105513186439,
+      "trade_count": 1
+    },
+    {
+      "code": "000858",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": -0.1054,
+      "max_drawdown": -0.1558223915519016,
+      "trade_count": 9
+    },
+    {
+      "code": "000858",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": -0.1186,
+      "max_drawdown": -0.2253791375680387,
+      "trade_count": 42
+    },
+    {
+      "code": "000858",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0469,
+      "max_drawdown": -0.05627032760213108,
+      "trade_count": 6
+    },
+    {
+      "code": "000858",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.102,
+      "max_drawdown": -0.13147800382357172,
+      "trade_count": 13
+    },
+    {
+      "code": "002151",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": -0.3957,
+      "max_drawdown": -0.5141566504734526,
+      "trade_count": 1
+    },
+    {
+      "code": "002151",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.3114,
+      "max_drawdown": -0.08952463211347618,
+      "trade_count": 18
+    },
+    {
+      "code": "002151",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": -0.143,
+      "max_drawdown": -0.2618358391100286,
+      "trade_count": 62
+    },
+    {
+      "code": "002151",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.142,
+      "max_drawdown": -0.14799388128728114,
+      "trade_count": 23
+    },
+    {
+      "code": "002151",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.212,
+      "max_drawdown": -0.23285381953364637,
+      "trade_count": 24
+    },
+    {
+      "code": "002151",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.4578,
+      "max_drawdown": -0.3206270273582869,
+      "trade_count": 1
+    },
+    {
+      "code": "002151",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.2322,
+      "max_drawdown": -0.02869912704579146,
+      "trade_count": 6
+    },
+    {
+      "code": "002151",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.1241,
+      "max_drawdown": -0.20487229474676086,
+      "trade_count": 44
+    },
+    {
+      "code": "002151",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.0227,
+      "max_drawdown": -0.05149400547665054,
+      "trade_count": 12
+    },
+    {
+      "code": "002151",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.2492,
+      "max_drawdown": -0.16872679891891804,
+      "trade_count": 21
+    },
+    {
+      "code": "002891",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": -0.3589,
+      "max_drawdown": -0.5630164023347253,
+      "trade_count": 1
+    },
+    {
+      "code": "002891",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": -0.1426,
+      "max_drawdown": -0.2568640808281827,
+      "trade_count": 23
+    },
+    {
+      "code": "002891",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.0565,
+      "max_drawdown": -0.18130961525968933,
+      "trade_count": 64
+    },
+    {
+      "code": "002891",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.3436,
+      "max_drawdown": -0.35232009434952205,
+      "trade_count": 35
+    },
+    {
+      "code": "002891",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.446,
+      "max_drawdown": -0.47169359701395325,
+      "trade_count": 26
+    },
+    {
+      "code": "002891",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 1.0264,
+      "max_drawdown": -0.3143097492562917,
+      "trade_count": 1
+    },
+    {
+      "code": "002891",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.0213,
+      "max_drawdown": -0.054190879220588975,
+      "trade_count": 5
+    },
+    {
+      "code": "002891",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": -0.2283,
+      "max_drawdown": -0.2767292579263856,
+      "trade_count": 54
+    },
+    {
+      "code": "002891",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.278,
+      "max_drawdown": -0.10253007131103814,
+      "trade_count": 9
+    },
+    {
+      "code": "002891",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.5564,
+      "max_drawdown": -0.2174696930956671,
+      "trade_count": 16
+    },
+    {
+      "code": "600120",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": -0.1889,
+      "max_drawdown": -0.24607865519901737,
+      "trade_count": 1
+    },
+    {
+      "code": "600120",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.1551,
+      "max_drawdown": -0.09549972912334606,
+      "trade_count": 13
+    },
+    {
+      "code": "600120",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": -0.0068,
+      "max_drawdown": -0.14685231891116282,
+      "trade_count": 60
+    },
+    {
+      "code": "600120",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0851,
+      "max_drawdown": -0.1369296660896308,
+      "trade_count": 22
+    },
+    {
+      "code": "600120",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.1558,
+      "max_drawdown": -0.20147841823209714,
+      "trade_count": 26
+    },
+    {
+      "code": "600120",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.7545,
+      "max_drawdown": -0.40082313928070323,
+      "trade_count": 1
+    },
+    {
+      "code": "600120",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.1773,
+      "max_drawdown": -0.04844355653389939,
+      "trade_count": 7
+    },
+    {
+      "code": "600120",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 1.3781,
+      "max_drawdown": -0.14349720726350695,
+      "trade_count": 46
+    },
+    {
+      "code": "600120",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.2707,
+      "max_drawdown": -0.20172580759250028,
+      "trade_count": 35
+    },
+    {
+      "code": "600120",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.1024,
+      "max_drawdown": -0.32710701035868756,
+      "trade_count": 35
+    },
+    {
+      "code": "600406",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.5054,
+      "max_drawdown": -0.43023951771466945,
+      "trade_count": 1
+    },
+    {
+      "code": "600406",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.0622,
+      "max_drawdown": -0.10258733482902381,
+      "trade_count": 8
+    },
+    {
+      "code": "600406",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.1468,
+      "max_drawdown": -0.24156494958442346,
+      "trade_count": 88
+    },
+    {
+      "code": "600406",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0183,
+      "max_drawdown": -0.17797951307536308,
+      "trade_count": 36
+    },
+    {
+      "code": "600406",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.1478,
+      "max_drawdown": -0.29707954880769144,
+      "trade_count": 43
+    },
+    {
+      "code": "600406",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.0718,
+      "max_drawdown": -0.21516125552262508,
+      "trade_count": 1
+    },
+    {
+      "code": "600406",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.0304,
+      "max_drawdown": -0.023854735624336217,
+      "trade_count": 3
+    },
+    {
+      "code": "600406",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": -0.1614,
+      "max_drawdown": -0.16767244947117496,
+      "trade_count": 28
+    },
+    {
+      "code": "600406",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0837,
+      "max_drawdown": -0.12567234071305045,
+      "trade_count": 34
+    },
+    {
+      "code": "600406",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.1314,
+      "max_drawdown": -0.18880106483743023,
+      "trade_count": 24
+    },
+    {
+      "code": "600415",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.3743,
+      "max_drawdown": -0.3375826669739898,
+      "trade_count": 1
+    },
+    {
+      "code": "600415",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": -0.0913,
+      "max_drawdown": -0.1408668508200586,
+      "trade_count": 14
+    },
+    {
+      "code": "600415",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": -0.0709,
+      "max_drawdown": -0.18673699999999996,
+      "trade_count": 48
+    },
+    {
+      "code": "600415",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0998,
+      "max_drawdown": -0.1632382472544945,
+      "trade_count": 37
+    },
+    {
+      "code": "600415",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.1546,
+      "max_drawdown": -0.2667460658294847,
+      "trade_count": 39
+    },
+    {
+      "code": "600415",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 1.2855,
+      "max_drawdown": -0.31666963648728275,
+      "trade_count": 1
+    },
+    {
+      "code": "600415",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.0646,
+      "max_drawdown": -0.10190511353210698,
+      "trade_count": 9
+    },
+    {
+      "code": "600415",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.0164,
+      "max_drawdown": -0.17924096194263303,
+      "trade_count": 18
+    },
+    {
+      "code": "600415",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.0411,
+      "max_drawdown": -0.09061481981185557,
+      "trade_count": 21
+    },
+    {
+      "code": "600415",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.5744,
+      "max_drawdown": -0.1933880336037781,
+      "trade_count": 25
+    },
+    {
+      "code": "600446",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": -0.2716,
+      "max_drawdown": -0.5092230294311616,
+      "trade_count": 1
+    },
+    {
+      "code": "600446",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.1604,
+      "max_drawdown": -0.1090407282279735,
+      "trade_count": 9
+    },
+    {
+      "code": "600446",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.4617,
+      "max_drawdown": -0.14932002513413875,
+      "trade_count": 68
+    },
+    {
+      "code": "600446",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.0029,
+      "max_drawdown": -0.1407507687773071,
+      "trade_count": 18
+    },
+    {
+      "code": "600446",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.0464,
+      "max_drawdown": -0.33922585414562145,
+      "trade_count": 23
+    },
+    {
+      "code": "600446",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.4091,
+      "max_drawdown": -0.3325319605131673,
+      "trade_count": 1
+    },
+    {
+      "code": "600446",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": -0.011,
+      "max_drawdown": -0.13252880000000006,
+      "trade_count": 9
+    },
+    {
+      "code": "600446",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.2336,
+      "max_drawdown": -0.27243334635147903,
+      "trade_count": 34
+    },
+    {
+      "code": "600446",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0708,
+      "max_drawdown": -0.1539063535834035,
+      "trade_count": 15
+    },
+    {
+      "code": "600446",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.2991,
+      "max_drawdown": -0.39977415190354676,
+      "trade_count": 30
+    },
+    {
+      "code": "600795",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.983,
+      "max_drawdown": -0.3236891419520472,
+      "trade_count": 1
+    },
+    {
+      "code": "600795",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.1432,
+      "max_drawdown": -0.08324505924999799,
+      "trade_count": 7
+    },
+    {
+      "code": "600795",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": -0.0884,
+      "max_drawdown": -0.294766857597708,
+      "trade_count": 48
+    },
+    {
+      "code": "600795",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.0005,
+      "max_drawdown": -0.21603188300309173,
+      "trade_count": 26
+    },
+    {
+      "code": "600795",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.1793,
+      "max_drawdown": -0.25051355244146295,
+      "trade_count": 46
+    },
+    {
+      "code": "600795",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.266,
+      "max_drawdown": -0.3097803702010348,
+      "trade_count": 1
+    },
+    {
+      "code": "600795",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": -0.0399,
+      "max_drawdown": -0.12878077337492114,
+      "trade_count": 5
+    },
+    {
+      "code": "600795",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.0893,
+      "max_drawdown": -0.11671463254837475,
+      "trade_count": 32
+    },
+    {
+      "code": "600795",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.3508,
+      "max_drawdown": -0.06937637323193589,
+      "trade_count": 25
+    },
+    {
+      "code": "600795",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.3867,
+      "max_drawdown": -0.13515138134227447,
+      "trade_count": 21
+    },
+    {
+      "code": "600900",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.3676,
+      "max_drawdown": -0.1736356755576526,
+      "trade_count": 1
+    },
+    {
+      "code": "600900",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": -0.0265,
+      "max_drawdown": -0.08804976186606027,
+      "trade_count": 9
+    },
+    {
+      "code": "600900",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.0967,
+      "max_drawdown": -0.11282054338385265,
+      "trade_count": 53
+    },
+    {
+      "code": "600900",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.0502,
+      "max_drawdown": -0.09333255556203698,
+      "trade_count": 45
+    },
+    {
+      "code": "600900",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.0293,
+      "max_drawdown": -0.1289588716963025,
+      "trade_count": 44
+    },
+    {
+      "code": "600900",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.2164,
+      "max_drawdown": -0.1308552811242948,
+      "trade_count": 1
+    },
+    {
+      "code": "600900",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.0012,
+      "max_drawdown": -0.0208223421042097,
+      "trade_count": 2
+    },
+    {
+      "code": "600900",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.1267,
+      "max_drawdown": -0.07658209169168341,
+      "trade_count": 36
+    },
+    {
+      "code": "600900",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.1368,
+      "max_drawdown": -0.073183419363939,
+      "trade_count": 14
+    },
+    {
+      "code": "600900",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.2031,
+      "max_drawdown": -0.08937193126100695,
+      "trade_count": 17
+    },
+    {
+      "code": "601218",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.0078,
+      "max_drawdown": -0.5575957864340321,
+      "trade_count": 1
+    },
+    {
+      "code": "601218",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": -0.0876,
+      "max_drawdown": -0.13176798448005034,
+      "trade_count": 8
+    },
+    {
+      "code": "601218",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": 0.3582,
+      "max_drawdown": -0.1776008754276189,
+      "trade_count": 70
+    },
+    {
+      "code": "601218",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.1445,
+      "max_drawdown": -0.2105983221406447,
+      "trade_count": 30
+    },
+    {
+      "code": "601218",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.1707,
+      "max_drawdown": -0.3320320663778273,
+      "trade_count": 31
+    },
+    {
+      "code": "601218",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": 0.2892,
+      "max_drawdown": -0.41731543008001376,
+      "trade_count": 1
+    },
+    {
+      "code": "601218",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": 0.6306,
+      "max_drawdown": -0.051784009910037974,
+      "trade_count": 11
+    },
+    {
+      "code": "601218",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": 0.164,
+      "max_drawdown": -0.17753865978131045,
+      "trade_count": 32
+    },
+    {
+      "code": "601218",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": 0.0676,
+      "max_drawdown": -0.17216504568128538,
+      "trade_count": 13
+    },
+    {
+      "code": "601218",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": 0.0661,
+      "max_drawdown": -0.24409739684003123,
+      "trade_count": 27
+    },
+    {
+      "code": "603605",
+      "period": "train",
+      "strategy": "buy_and_hold",
+      "total_return": 0.0976,
+      "max_drawdown": -0.30418242212106006,
+      "trade_count": 1
+    },
+    {
+      "code": "603605",
+      "period": "train",
+      "strategy": "three_factors",
+      "total_return": 0.149,
+      "max_drawdown": -0.24143356173081384,
+      "trade_count": 14
+    },
+    {
+      "code": "603605",
+      "period": "train",
+      "strategy": "supertrend_ma",
+      "total_return": -0.0725,
+      "max_drawdown": -0.24381958480078963,
+      "trade_count": 84
+    },
+    {
+      "code": "603605",
+      "period": "train",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.2254,
+      "max_drawdown": -0.2762055810468917,
+      "trade_count": 33
+    },
+    {
+      "code": "603605",
+      "period": "train",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.3729,
+      "max_drawdown": -0.4539533465472607,
+      "trade_count": 44
+    },
+    {
+      "code": "603605",
+      "period": "out_of_sample",
+      "strategy": "buy_and_hold",
+      "total_return": -0.2807,
+      "max_drawdown": -0.42345644535484067,
+      "trade_count": 1
+    },
+    {
+      "code": "603605",
+      "period": "out_of_sample",
+      "strategy": "three_factors",
+      "total_return": -0.0127,
+      "max_drawdown": -0.2198282135777192,
+      "trade_count": 17
+    },
+    {
+      "code": "603605",
+      "period": "out_of_sample",
+      "strategy": "supertrend_ma",
+      "total_return": -0.2261,
+      "max_drawdown": -0.2739272577325778,
+      "trade_count": 34
+    },
+    {
+      "code": "603605",
+      "period": "out_of_sample",
+      "strategy": "trend_pullback_maw_macd",
+      "total_return": -0.1422,
+      "max_drawdown": -0.17317620250675467,
+      "trade_count": 10
+    },
+    {
+      "code": "603605",
+      "period": "out_of_sample",
+      "strategy": "trend_following_maw_macd",
+      "total_return": -0.2044,
+      "max_drawdown": -0.21936655172356162,
+      "trade_count": 9
+    }
+  ],
+  "skipped": [
+    {
+      "code": "159740",
+      "reason": "missing MAW fields: 成交额, 换手率"
+    }
+  ],
+  "failures": [],
+  "out_of_sample_summary": {
+    "buy_and_hold": {
+      "mean_return": 0.3759416666666667,
+      "median_return": 0.2776,
+      "mean_max_drawdown": -0.33112926291112216,
+      "beat_buy_and_hold_ratio": 0.0
+    },
+    "three_factors": {
+      "mean_return": 0.09112500000000001,
+      "median_return": 0.025849999999999998,
+      "mean_max_drawdown": -0.09061307853962605,
+      "beat_buy_and_hold_ratio": 0.25
+    },
+    "supertrend_ma": {
+      "mean_return": 0.12796666666666667,
+      "median_return": 0.1067,
+      "mean_max_drawdown": -0.18771735808532714,
+      "beat_buy_and_hold_ratio": 0.25
+    },
+    "trend_pullback_maw_macd": {
+      "mean_return": 0.05476666666666667,
+      "median_return": 0.0319,
+      "mean_max_drawdown": -0.11991917628951629,
+      "beat_buy_and_hold_ratio": 0.25
+    },
+    "trend_following_maw_macd": {
+      "mean_return": 0.11524166666666667,
+      "median_return": 0.1262,
+      "mean_max_drawdown": -0.22025562703569856,
+      "beat_buy_and_hold_ratio": 0.3333333333333333
+    }
+  },
+  "tuning_performed": false
+}
