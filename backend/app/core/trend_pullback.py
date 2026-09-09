@@ -230,6 +230,13 @@ def run_trend_pullback(
                             sell_to_ratio(i, profit_target, profit_reason)
                         acted = True
 
+        if not acted:
+            total_assets = cash + shares * close
+            current_ratio = shares * close / total_assets if total_assets > 0 else 0.0
+            if current_ratio > 0.8 + 1e-12:
+                sell_to_ratio(i, 0.8, "仓位上限减仓")
+                acted = True
+
         if not acted and target >= 0.4:
             total_assets = cash + shares * close
             current_ratio = shares * close / total_assets if total_assets > 0 else 0.0

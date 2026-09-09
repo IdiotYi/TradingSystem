@@ -212,6 +212,29 @@ def test_fee_inclusive_exposure_never_exceeds_eighty_percent(monkeypatch):
     assert shares * close[-1] / (cash + shares * close[-1]) <= 0.8 + 1e-12
 
 
+def test_price_appreciation_triggers_actual_position_cap_reduction(monkeypatch):
+    n = 130
+    close = np.full(n, 100.0)
+    close[120] = 100.0
+    close[121:] = 125.0
+    m20 = np.full(n, 80.0)
+    m60 = np.linspace(70.0, 100.0, n)
+    m120 = np.linspace(50.0, 80.0, n)
+    m20[120:122] = [105.0, 130.0]
+    m60[120:122] = [100.0, 110.0]
+    m60[100] = 90.0
+    m120[120:122] = [80.0, 85.0]
+    histogram = np.arange(n, dtype=float)
+    install_sequences(monkeypatch, m20, m60, m120, histogram)
+
+    trades, _, _, series = run_trend_pullback(
+        deterministic_frame(close), 100_000, no_fee, no_fee
+    )
+
+    assert max(series["position_ratio"]) <= 0.8 + 1e-12
+    assert any(trade["reason"] == "仓位上限减仓" for trade in trades)
+
+
 def test_risk_reduction_prefers_lower_cost_loss_target(monkeypatch):
     n = 145; close = np.full(n, 130.0); close[120] = 105.0; close[-2:] = [89.0, 88.0]
     m20 = np.linspace(90, 120, n); m60 = np.linspace(80, 100, n); m120 = np.linspace(65, 85, n)
@@ -412,7 +435,7 @@ def test_exact_twelve_percent_maw20_extension_reduces_for_shrinking_histogram():
     m60[-2:], m120[-2:] = [105.0, 105.0], [90.0, 90.0]
     hist[-3:] = [3.0, 2.0, 1.0]
     trades, *_ = run_prepared(make_prepared_frame(close, m20, m60, m120, hist), initial_cash=1_000_000)
-    assert trades[-1]["reason"] == "高位动能减仓"
+    assert trades[-1]["reason"] == "仓位上限减仓"
 
 
 def test_exact_twenty_percent_maw20_extension_with_bearish_cross_reduces():
