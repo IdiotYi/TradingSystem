@@ -18,18 +18,24 @@ def _fee_total(fee_fn: Callable[[float], dict], amount: float) -> float:
     return float(fee_fn(float(amount)).get("total_fee", 0.0))
 
 
-def prepare_trend_pullback_indicators(df: pd.DataFrame) -> pd.DataFrame:
+def prepare_trend_pullback_indicators(
+    df: pd.DataFrame,
+    short_period: int = 20,
+    medium_period: int = 60,
+    long_period: int = 120,
+    slope_days: int = 20,
+) -> pd.DataFrame:
     """Return market rows with trend indicators computed over their full history."""
     missing = _REQUIRED_FIELDS.difference(df.columns)
     if missing:
         raise ValueError(f"MAW 必需字段缺失: {', '.join(sorted(missing))}")
 
     data = df.reset_index(drop=True).copy()
-    data["_maw20"] = calc_maw(data, 20)
-    data["_maw60"] = calc_maw(data, 60)
-    data["_maw120"] = calc_maw(data, 120)
+    data["_maw20"] = calc_maw(data, short_period)
+    data["_maw60"] = calc_maw(data, medium_period)
+    data["_maw120"] = calc_maw(data, long_period)
     data["_macd_dif"], data["_macd_dea"], data["_macd_histogram"] = calc_macd(data["收盘"])
-    data["_maw60_lag20"] = data["_maw60"].shift(20)
+    data["_maw60_lag20"] = data["_maw60"].shift(slope_days)
     if len(data) and any(data[column].notna().sum() == 0 for column in ("_maw20", "_maw60", "_maw120")):
         raise ValueError("MAW required fields produced no valid values")
     return data
@@ -41,10 +47,20 @@ def run_trend_pullback(
     buy_fee: Callable[[float], dict],
     sell_fee: Callable[[float], dict],
     prepared: pd.DataFrame | None = None,
+    params: dict | None = None,
 ) -> tuple[list[dict], float, int, dict]:
     """Run the strategy sequentially, executing at each bar's closing price."""
+    params = params or {}
+    short_period = int(params.get("maw_short_period", 20))
+    medium_period = int(params.get("maw_medium_period", 60))
+    long_period = int(params.get("maw_long_period", 120))
+    slope_days = int(params.get("maw_slope_days", 20))
+    min_rebalance_delta = float(params.get("min_rebalance_delta", 0.10))
+    min_buy_interval_days = int(params.get("min_buy_interval_days", 5))
+    if min(short_period, medium_period, long_period, slope_days, min_buy_interval_days) <= 0 or not 0 < min_rebalance_delta <= 1:
+        raise ValueError("趋势策略参数必须为正数且最小调仓差值不超过1")
     if prepared is None:
-        data = prepare_trend_pullback_indicators(df)
+        data = prepare_trend_pullback_indicators(df, short_period, medium_period, long_period, slope_days)
     else:
         attributes = dict(prepared.attrs)
         data = prepared.reset_index(drop=True).copy()
@@ -67,7 +83,7 @@ def run_trend_pullback(
     last_buy_price: float | None = None
     last_buy_index: int | None = None
 
-    def record(action: str, quantity: int, price: float, fee: float, date, reason: str) -> None:
+    def record(action: str, quantity: int, price: float, fees: dict, date, reason: str, pnl=None) -> None:
         trades.append({
             "date": str(date),
             "signal_date": str(date),
@@ -75,7 +91,12 @@ def run_trend_pullback(
             "price": float(price),
             "shares": int(quantity),
             "amount": float(quantity * price),
-            "fee": float(fee),
+            "transfer_fee": float(fees.get("transfer_fee", 0.0)),
+            "commission": float(fees.get("commission", 0.0)),
+            "stamp_tax": fees.get("stamp_tax"),
+            "total_fee": float(fees.get("total_fee", 0.0)),
+            "pnl": None if pnl is None else float(pnl),
+            "remaining_cash": round(cash, 2),
             "reason": reason,
         })
 
@@ -89,10 +110,12 @@ def run_trend_pullback(
         if quantity <= 0:
             return False
         amount = quantity * price
-        fee = _fee_total(sell_fee, amount)
+        fees = sell_fee(float(amount))
+        fee = float(fees.get("total_fee", 0.0))
+        pnl = (price - average_cost) * quantity - fee
         cash += amount - fee
         shares -= quantity
-        record("sell", quantity, price, fee, data.at[i, "日期"], reason)
+        record("sell", quantity, price, fees, data.at[i, "日期"], reason, pnl)
         if shares == 0:
             average_cost = 0.0
             last_buy_price = None
@@ -117,14 +140,15 @@ def run_trend_pullback(
         if quantity <= 0:
             return False
         amount = quantity * price
-        fee = _fee_total(buy_fee, amount)
+        fees = buy_fee(float(amount))
+        fee = float(fees.get("total_fee", 0.0))
         old_cost = average_cost * shares
         cash -= amount + fee
         shares += quantity
         average_cost = (old_cost + amount + fee) / shares
         last_buy_price = price
         last_buy_index = i
-        record("buy", quantity, price, fee, data.at[i, "日期"], reason)
+        record("buy", quantity, price, fees, data.at[i, "日期"], reason)
         return True
 
     history_offset = int(data.attrs.get("history_offset", 0))
@@ -145,7 +169,7 @@ def run_trend_pullback(
         )
         confirmation = hist_improving or bullish_cross
         healthy = (
-            valid and history_i >= 20 and close > m120 and m60 > m120
+            valid and history_i >= slope_days and close > m120 and m60 > m120
             and not pd.isna(data.at[i, "_maw60_lag20"]) and m60 > data.at[i, "_maw60_lag20"]
         )
 
@@ -189,7 +213,7 @@ def run_trend_pullback(
                 if loss <= -0.12 and 0.3 < risk_target:
                     risk_target, risk_reason = 0.3, "成本亏损12%减仓"
                 if risk_target < 1.0:
-                    if risk_target < current_ratio:
+                    if current_ratio - risk_target >= min_rebalance_delta:
                         sell_to_ratio(i, risk_target, risk_reason)
                     acted = True
                 else:
@@ -202,7 +226,7 @@ def run_trend_pullback(
                         profit_targets.append((0.2, "跌破MAW20止盈"))
                     if profit_targets:
                         profit_target, profit_reason = min(profit_targets, key=lambda item: item[0])
-                        if profit_target < current_ratio:
+                        if current_ratio - profit_target >= min_rebalance_delta:
                             sell_to_ratio(i, profit_target, profit_reason)
                         acted = True
 
@@ -211,12 +235,12 @@ def run_trend_pullback(
             current_ratio = shares * close / total_assets if total_assets > 0 else 0.0
             if shares == 0:
                 buy_to_ratio(i, target, "趋势回撤开仓")
-            elif target - current_ratio >= 0.10:
+            elif target - current_ratio >= min_rebalance_delta:
                 recovered_m20 = (
                     i > 0 and close >= m20 and data.at[i - 1, "收盘"] < maw20.iloc[i - 1]
                 )
                 can_add = (
-                    last_buy_index is not None and i - last_buy_index >= 5
+                    last_buy_index is not None and i - last_buy_index >= min_buy_interval_days
                     and (close < last_buy_price or recovered_m20)
                     and i > 0 and histogram.iloc[i] >= histogram.iloc[i - 1]
                     and valid and close > m120

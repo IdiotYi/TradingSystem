@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from app.services.backtest_service import run_backtest
 
 router = APIRouter()
@@ -24,12 +24,12 @@ class StrategyParams(BaseModel):
     # SuperTrend+MA 参数
     recent_high_window: int = 25
     # MAW + MACD 中长线趋势策略参数（当前引擎使用批准的固定规则）
-    maw_short_period: int = 20
-    maw_medium_period: int = 60
-    maw_long_period: int = 120
-    maw_slope_days: int = 20
-    min_rebalance_delta: float = 0.10
-    min_buy_interval_days: int = 5
+    maw_short_period: int = Field(default=20, gt=0)
+    maw_medium_period: int = Field(default=60, gt=0)
+    maw_long_period: int = Field(default=120, gt=0)
+    maw_slope_days: int = Field(default=20, gt=0)
+    min_rebalance_delta: float = Field(default=0.10, gt=0, le=1)
+    min_buy_interval_days: int = Field(default=5, gt=0)
 
 
 class BacktestRequest(BaseModel):

@@ -229,3 +229,42 @@ def test_profit_rules_choose_lowest_target(monkeypatch):
     install_sequences(monkeypatch, m20, m60, m120, hist, dif, dea)
     trades, *_ = run_trend_pullback(deterministic_frame(close), 100_000, no_fee, no_fee)
     assert trades[-1]["reason"] == "高位死叉止盈"
+
+def test_trade_records_lossless_fee_cash_and_sell_pnl(monkeypatch):
+    n = 145
+    close = np.full(n, 130.0); close[120] = 100.0; close[-1] = 80.0
+    m20 = np.linspace(90, 120, n); m60 = np.linspace(80, 105, n); m120 = np.linspace(60, 90, n)
+    install_sequences(monkeypatch, m20, m60, m120, np.arange(n, dtype=float))
+    def buy_fee(amount): return {"transfer_fee": 1.0, "commission": 2.0, "stamp_tax": None, "total_fee": 3.0}
+    def sell_fee(amount): return {"transfer_fee": 1.0, "commission": 2.0, "stamp_tax": 4.0, "total_fee": 7.0}
+    trades, cash, _, _ = run_trend_pullback(deterministic_frame(close), 100_000, buy_fee, sell_fee)
+    assert trades[0]["remaining_cash"] == pytest.approx(100_000 - trades[0]["amount"] - 3.0)
+    assert trades[-1]["transfer_fee"] == 1.0
+    assert trades[-1]["commission"] == 2.0
+    assert trades[-1]["stamp_tax"] == 4.0
+    assert trades[-1]["total_fee"] == 7.0
+    assert trades[-1]["pnl"] is not None
+    assert trades[-1]["remaining_cash"] == pytest.approx(cash)
+
+
+def test_configurable_periods_and_buy_interval_are_honored(monkeypatch):
+    n = 40; close = np.full(n, 100.0)
+    periods = []
+    def fake_maw(df, period):
+        periods.append(period)
+        base = {3: 100.0, 5: 90.0, 8: 70.0}[period]
+        return pd.Series(np.linspace(base - 10, base, n), index=df.index)
+    monkeypatch.setattr("app.core.trend_pullback.calc_maw", fake_maw)
+    monkeypatch.setattr("app.core.trend_pullback.calc_macd", lambda c: (pd.Series(np.ones(n)), pd.Series(np.zeros(n)), pd.Series(np.arange(n, dtype=float))))
+    run_trend_pullback(deterministic_frame(close), 100_000, no_fee, no_fee, params={"maw_short_period":3,"maw_medium_period":5,"maw_long_period":8,"maw_slope_days":2,"min_rebalance_delta":0.15,"min_buy_interval_days":2})
+    assert periods == [3, 5, 8]
+
+
+def test_partial_sell_respects_configured_minimum_rebalance_delta(monkeypatch):
+    n = 130; close = np.full(n, 100.0); close[120] = 50.0; close[-1] = 90.0
+    m20 = np.full(n, 75.0); m60 = np.full(n, 70.0); m120 = np.full(n, 40.0)
+    m60[100] = 45.0; m60[120] = 50.0; m60[-1] = 90.0
+    hist = np.arange(n, dtype=float)
+    install_sequences(monkeypatch, m20, m60, m120, hist)
+    trades, *_ = run_trend_pullback(deterministic_frame(close), 9_000, no_fee, no_fee, params={"min_rebalance_delta":0.25})
+    assert not any(t["reason"] == "高位动能减仓" for t in trades)

@@ -328,7 +328,13 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
 
     trend_series = None
     if strategy_name == "trend_pullback_maw_macd":
-        prepared_all = prepare_trend_pullback_indicators(df_all)
+        prepared_all = prepare_trend_pullback_indicators(
+            df_all,
+            short_period=strategy_params.get("maw_short_period", 20),
+            medium_period=strategy_params.get("maw_medium_period", 60),
+            long_period=strategy_params.get("maw_long_period", 120),
+            slope_days=strategy_params.get("maw_slope_days", 20),
+        )
         start_mask = prepared_all["日期"] >= start_date
         start_idx = int(start_mask.idxmax()) if start_mask.any() else len(prepared_all)
         prepared = prepared_all.loc[start_mask].reset_index(drop=True)
@@ -341,16 +347,10 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
             }
         df = prepared[df_all.columns]
         trades, final_cash, final_shares, trend_series = run_trend_pullback(
-            df, initial_cash, _buy_fees, _sell_fees, prepared=prepared
+            df, initial_cash, _buy_fees, _sell_fees, prepared=prepared, params=strategy_params
         )
         for trade in trades:
             trade["direction"] = "买入" if trade.pop("action") == "buy" else "卖出"
-            trade["total_fee"] = trade.pop("fee")
-            trade.setdefault("transfer_fee", 0.0)
-            trade.setdefault("commission", 0.0)
-            trade.setdefault("stamp_tax", None)
-            trade.setdefault("pnl", None)
-            trade.setdefault("remaining_cash", round(final_cash, 2))
         # Indicators retain full-history warmup; portfolio state begins at start_date.
     else:
         df = df_all[df_all["日期"] >= start_date].reset_index(drop=True)
