@@ -172,15 +172,33 @@ def test_add_requires_five_bars_and_price_or_recovery_gate(monkeypatch):
 
 
 def test_matched_exit_suppresses_same_bar_buy_when_rounding_needs_no_sale(monkeypatch):
-    n = 145
+    n = 130
     close = np.full(n, 100.0)
-    m20 = np.linspace(80, 105, n); m60 = np.linspace(75, 100, n); m120 = np.linspace(60, 90, n)
+    close[120] = 50.0
+    close[-2:] = [100.0, 90.0]
+    m20 = np.full(n, 75.0)
+    m60 = np.full(n, 70.0)
+    m120 = np.full(n, 40.0)
+    m60[100] = 45.0
+    m60[120] = 50.0
+    m60[-1] = 90.0
     hist = np.arange(n, dtype=float)
     install_sequences(monkeypatch, m20, m60, m120, hist)
-    # A 100-share position is below a .4 reduction target; matched risk rule must still consume bar.
-    def huge_fee(amount): return {"total_fee": 89_900.0 if amount > 50_000 else 0.0}
-    trades, *_ = run_trend_pullback(deterministic_frame(close), 100_000, huge_fee, no_fee)
-    assert not any(t["action"] == "buy" and t["date"] == deterministic_frame(close).at[-1 if False else n-1, "日期"] for t in trades)
+
+    # The opening buy leaves exactly 100 shares. On the final bar, the high-MAW20
+    # momentum exit matches a 70% target, but that target permits 100 shares, so
+    # sell_to_ratio rounds the required sale to zero. The bar also satisfies all
+    # add gates and targets 80%, proving acted suppression prevents the addition.
+    frame = deterministic_frame(close)
+    trades, *_ = run_trend_pullback(frame, 9_000, no_fee, no_fee)
+    final_date = frame.at[n - 1, "日期"]
+    buys = [trade for trade in trades if trade["action"] == "buy"]
+
+    assert [(trade["date"], trade["shares"]) for trade in buys] == [
+        (frame.at[120, "日期"], 100)
+    ]
+    assert not any(trade["action"] == "sell" and trade["date"] == final_date for trade in trades)
+    assert not any(trade["action"] == "buy" and trade["date"] == final_date for trade in trades)
 
 
 def test_fee_inclusive_exposure_never_exceeds_eighty_percent(monkeypatch):
