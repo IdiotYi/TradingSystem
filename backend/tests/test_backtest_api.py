@@ -186,4 +186,3 @@ def test_return_focused_trend_api_isolates_warmup_reaches_full_target_and_keeps_
     assert first["remaining_cash"] == pytest.approx(
         request["initial_cash"] - first["amount"] - first["total_fee"], abs=0.01
     )
-
