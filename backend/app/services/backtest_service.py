@@ -9,6 +9,7 @@ from app.core.three_factors import (
     BIAS_N, MOMENTUM_DAY, SLOPE_N, EFFICIENCY_N, ZSCORE_WINDOW,
 )
 from app.core.indicators import calc_ma, calc_supertrend, calc_kama, calc_maw
+from app.core.trend_pullback import run_trend_pullback
 from app.services.data_service import load_stock_data
 
 
@@ -325,11 +326,38 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         df_all["st_upper"] = st_up
         df_all["st_lower"] = st_lo
 
-    df = df_all[df_all["日期"] >= start_date].reset_index(drop=True)
+    trend_series = None
+    if strategy_name == "trend_pullback_maw_macd":
+        trades_all, _, _, full_series = run_trend_pullback(
+            df_all, initial_cash, _buy_fees, _sell_fees
+        )
+        start_mask = df_all["日期"] >= start_date
+        start_idx = int(start_mask.idxmax()) if start_mask.any() else len(df_all)
+        df = df_all.loc[start_mask].reset_index(drop=True)
+        trend_series = {key: values[start_idx:] for key, values in full_series.items()}
+        valid_dates = set(df["日期"])
+        trades, final_cash, final_shares = run_trend_pullback(
+            df_all, initial_cash, _buy_fees, _sell_fees
+        )[:3]
+        trades = [trade for trade in trades if trade["date"] in valid_dates]
+        for trade in trades:
+            trade["direction"] = "买入" if trade.pop("action") == "buy" else "卖出"
+            trade["total_fee"] = trade.pop("fee")
+            trade.setdefault("transfer_fee", 0.0)
+            trade.setdefault("commission", 0.0)
+            trade.setdefault("stamp_tax", None)
+            trade.setdefault("pnl", None)
+            trade.setdefault("remaining_cash", round(final_cash, 2))
+        # Re-run on full warm-up history preserves indicator state; reconstruct end state
+        # from the full result, while response/trades are restricted to requested dates.
+    else:
+        df = df_all[df_all["日期"] >= start_date].reset_index(drop=True)
     if df.empty:
         raise ValueError(f"{start_date} ~ {end_date} 期间无交易数据")
 
-    if strategy_name == "buy_and_hold":
+    if strategy_name == "trend_pullback_maw_macd":
+        pass
+    elif strategy_name == "buy_and_hold":
         trades, final_cash, final_shares = _run_buy_and_hold(df, initial_cash)
     elif strategy_name == "supertrend_ma":
         trades, final_cash, final_shares = _run_supertrend_ma(df, initial_cash, strategy_params)
@@ -358,7 +386,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     last_price = float(close.iloc[-1])
     total_assets = final_shares * last_price + final_cash
     total_return = (total_assets - initial_cash) / initial_cash
-    total_fees = sum(t["total_fee"] for t in trades)
+    total_fees = sum(t.get("total_fee", t.get("fee", 0.0)) for t in trades)
 
     # Win rate & profit-loss ratio (only for active strategies)
     win_rate = None
@@ -387,6 +415,16 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
             return [None] * len(df)
         return [None if pd.isna(v) else round(float(v), 6) for v in df[col]]
 
+    trend_keys = (
+        "maw20", "maw60", "maw120", "macd_dif", "macd_dea",
+        "macd_histogram", "target_position", "position_ratio",
+    )
+    serialized_trend = {
+        key: (trend_series[key] if trend_series is not None else [None] * len(df))
+        for key in trend_keys
+    }
+    ratios = [value for value in serialized_trend["position_ratio"] if value is not None]
+
     return {
         "success": True,
         "strategy_name": strategy_name,
@@ -394,7 +432,14 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         "open": _to_list(open_), "high": _to_list(high),
         "low": _to_list(low), "close": _to_list(close),
         "ma5": _to_list(ma5), "ma20": _to_list(ma20), "ma60": _to_list(ma60),
-        "maw20": _to_list(maw20_vals),
+        "maw20": serialized_trend["maw20"] if trend_series is not None else _to_list(maw20_vals),
+        "maw60": serialized_trend["maw60"],
+        "maw120": serialized_trend["maw120"],
+        "macd_dif": serialized_trend["macd_dif"],
+        "macd_dea": serialized_trend["macd_dea"],
+        "macd_histogram": serialized_trend["macd_histogram"],
+        "target_position": serialized_trend["target_position"],
+        "position_ratio": serialized_trend["position_ratio"],
         "kama": _to_list(kama_vals),
         "supertrend": _to_list(st_vals),
         "supertrend_direction": [None if pd.isna(v) else int(v) for v in st_dir],
@@ -413,5 +458,8 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
             "final_cash": round(final_cash, 2),
             "win_rate": win_rate,
             "profit_loss_ratio": profit_loss_ratio,
+            "max_position_ratio": round(max(ratios), 6) if ratios else 0.0,
+            "average_position_ratio": round(sum(ratios) / len(ratios), 6) if ratios else 0.0,
+            "rebalance_count": len(trades) if strategy_name == "trend_pullback_maw_macd" else 0,
         },
     }

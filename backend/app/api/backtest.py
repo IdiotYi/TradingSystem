@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from app.services.backtest_service import run_backtest
@@ -21,6 +23,13 @@ class StrategyParams(BaseModel):
     zscore_window: int = 60
     # SuperTrend+MA 参数
     recent_high_window: int = 25
+    # MAW + MACD 中长线趋势策略参数（当前引擎使用批准的固定规则）
+    maw_short_period: int = 20
+    maw_medium_period: int = 60
+    maw_long_period: int = 120
+    maw_slope_days: int = 20
+    min_rebalance_delta: float = 0.10
+    min_buy_interval_days: int = 5
 
 
 class BacktestRequest(BaseModel):
@@ -28,7 +37,10 @@ class BacktestRequest(BaseModel):
     start_date: str
     end_date: str
     initial_cash: float = 100000.0
-    strategy_name: str = "three_factors"
+    strategy_name: Literal[
+        "three_factors", "three_factors_v2", "supertrend_ma",
+        "supertrend_wma", "buy_and_hold", "trend_pullback_maw_macd",
+    ] = "three_factors"
     strategy_params: StrategyParams = StrategyParams()
 
 
