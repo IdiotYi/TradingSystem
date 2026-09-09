@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -139,4 +140,50 @@ def test_return_focused_trend_strategy_is_registered_and_aligned(monkeypatch):
         "macd_histogram", "target_position", "position_ratio",
     ))
     assert all(trade["signal_date"] == trade["date"] for trade in data["trades"])
+
+
+
+def test_return_focused_trend_api_isolates_warmup_reaches_full_target_and_keeps_accounting(monkeypatch):
+    frame = _frame(180)
+    requested_start = frame.at[150, "日期"]
+    request = _request("trend_following_maw_macd")
+    request["start_date"] = requested_start
+    request["end_date"] = frame.at[179, "日期"]
+    request["initial_cash"] = 1_000_000
+
+    def fake_maw(df, period):
+        values = {
+            20: np.linspace(100.0, 120.0, len(df)),
+            60: np.linspace(80.0, 100.0, len(df)),
+            120: np.linspace(60.0, 80.0, len(df)),
+        }[period]
+        return pd.Series(values, index=df.index)
+
+    def fake_macd(close):
+        n = len(close)
+        return (
+            pd.Series(np.ones(n), index=close.index),
+            pd.Series(np.zeros(n), index=close.index),
+            pd.Series(np.arange(n, dtype=float), index=close.index),
+        )
+
+    monkeypatch.setattr("app.services.backtest_service.load_stock_data", lambda _: frame)
+    monkeypatch.setattr("app.core.trend_following.calc_maw", fake_maw)
+    monkeypatch.setattr("app.core.trend_following.calc_macd", fake_macd)
+
+    response = client.post("/api/backtest/run", json=request)
+    assert response.status_code == 200, response.text
+    data = response.json()
+
+    assert data["trades"][0]["date"] == requested_start
+    assert data["trades"][0]["signal_date"] == requested_start
+    assert data["target_position"][0] == 1.0
+    assert data["summary"]["max_position_ratio"] > 0.98
+    first = data["trades"][0]
+    assert first["transfer_fee"] >= 0
+    assert first["commission"] >= 0
+    assert first["total_fee"] == pytest.approx(first["transfer_fee"] + first["commission"])
+    assert first["remaining_cash"] == pytest.approx(
+        request["initial_cash"] - first["amount"] - first["total_fee"], abs=0.01
+    )
 

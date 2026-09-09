@@ -109,9 +109,26 @@ def run_trend_following(df, initial_cash, buy_fee: Callable[[float], dict], sell
         assets = cash + shares * close; ratio = shares * close / assets if assets > 0 else 0.0; acted = False
         if shares:
             loss = (close - average_cost) / average_cost
-            below120 = i >= 2 and all(float(data.at[j, "收盘"]) < float(data.at[j, "_maw120"]) for j in range(i - 2, i + 1))
-            below60 = i >= 2 and all(float(data.at[j, "收盘"]) < float(data.at[j, "_maw60"]) for j in range(i - 2, i + 1))
-            weak = i >= 2 and close < m60 and all(dif.iloc[j] < dea.iloc[j] for j in range(i - 2, i + 1))
+            lookback = range(i - 2, i + 1)
+            below120 = (
+                i >= 2
+                and all(pd.notna(data.at[j, "收盘"]) and pd.notna(data.at[j, "_maw120"]) for j in lookback)
+                and all(data.at[j, "收盘"] < data.at[j, "_maw120"] for j in lookback)
+            )
+            lookback = range(i - 2, i + 1)
+            below60 = (
+                i >= 2
+                and all(pd.notna(data.at[j, "收盘"]) and pd.notna(data.at[j, "_maw60"]) for j in lookback)
+                and all(data.at[j, "收盘"] < data.at[j, "_maw60"] for j in lookback)
+            )
+            lookback = range(i - 2, i + 1)
+            weak = (
+                i >= 2
+                and pd.notna(m60)
+                and close < m60
+                and all(pd.notna(dif.iloc[j]) and pd.notna(dea.iloc[j]) for j in lookback)
+                and all(dif.iloc[j] < dea.iloc[j] for j in lookback)
+            )
             if loss <= -0.25: sell_to(i, 0, "成本亏损25%清仓"); acted = True
             elif valid and m60 < m120: sell_to(i, 0, "MAW60跌破MAW120清仓"); acted = True
             elif below120: sell_to(i, 0, "跌破MAW120三日清仓"); acted = True

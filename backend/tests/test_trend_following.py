@@ -151,3 +151,35 @@ def test_future_truncation_keeps_prior_trades_and_series_identical():
     assert [t for t in full[0] if t["date"] <= prepared.at[179, "日期"]] == cut[0]
     for key in cut[3]:
         assert full[3][key][:180] == cut[3][key]
+
+@pytest.mark.parametrize(
+    ("column", "reason"),
+    [
+        ("_maw120", "跌破MAW120三日清仓"),
+        ("_maw60", "跌破MAW60三日减仓"),
+    ],
+)
+def test_three_day_price_guards_ignore_windows_with_prior_non_numeric(column, reason):
+    close, m20, m60, m120 = seed_normal_entry()
+    close[-3:] = 99.0
+    m60[-3:], m120[-3:] = 100.0, 90.0
+    prepared = frame(close, m20, m60, m120)
+    prepared.loc[prepared.index[-2], column] = pd.NA
+
+    trades, *_ = run(prepared)
+
+    assert not any(trade["reason"] == reason for trade in trades)
+
+
+def test_three_day_macd_weak_guard_ignores_prior_non_numeric():
+    close, m20, m60, m120 = seed_normal_entry()
+    close[-1] = 99.0
+    m60[-3:], m120[-3:] = 100.0, 90.0
+    dif, dea = np.ones(150), np.zeros(150)
+    dif[-3:] = -1.0
+    prepared = frame(close, m20, m60, m120, dif=dif, dea=dea)
+    prepared.loc[prepared.index[-2], "_macd_dif"] = pd.NA
+
+    trades, *_ = run(prepared)
+
+    assert not any(trade["reason"] == "MAW60下方MACD弱势减仓" for trade in trades)

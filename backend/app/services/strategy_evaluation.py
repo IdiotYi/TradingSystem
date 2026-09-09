@@ -12,8 +12,8 @@ import pandas as pd
 from app.services.backtest_service import run_backtest
 
 PERIODS = {
-    "train": {"start": "2021-01-01", "end": "2023-12-31"},
-    "out_of_sample": {"start": "2024-01-01", "end": "2025-12-31"},
+    "development_historical": {"start": "2021-01-01", "end": "2023-12-31"},
+    "later_holdout": {"start": "2024-01-01", "end": "2025-12-31"},
 }
 STRATEGIES = ["buy_and_hold", "three_factors", "supertrend_ma", "trend_pullback_maw_macd", "trend_following_maw_macd"]
 REQUIRED_FIELDS = {"日期", "开盘", "最高", "最低", "收盘", "成交量"}
@@ -104,10 +104,10 @@ def evaluate_cached_strategies(data_dir: Path, codes: list[str] | None = None) -
                 except Exception as exc:
                     failures.append({"code": code, "period": period_name, "strategy": strategy, "reason": str(exc)})
     summary = {}
-    oos = [r for r in results if r["period"] == "out_of_sample"]
-    bh = {r["code"]: r["total_return"] for r in oos if r["strategy"] == "buy_and_hold"}
+    holdout = [r for r in results if r["period"] == "later_holdout"]
+    bh = {r["code"]: r["total_return"] for r in holdout if r["strategy"] == "buy_and_hold"}
     for strategy in STRATEGIES:
-        rows = [r for r in oos if r["strategy"] == strategy]
+        rows = [r for r in holdout if r["strategy"] == strategy]
         returns = [r["total_return"] for r in rows]
         drawdowns = [r["max_drawdown"] for r in rows]
         comparable = [r for r in rows if r["code"] in bh]
@@ -117,8 +117,18 @@ def evaluate_cached_strategies(data_dir: Path, codes: list[str] | None = None) -
             "mean_max_drawdown": mean(drawdowns) if drawdowns else None,
             "beat_buy_and_hold_ratio": (sum(r["total_return"] > bh[r["code"]] for r in comparable) / len(comparable)) if comparable else None,
         }
-    return {"periods": PERIODS, "strategies": STRATEGIES, "results": results, "skipped": skipped,
-            "failures": failures, "out_of_sample_summary": summary, "tuning_performed": False}
+    return {
+        "evaluation_kind": "fixed_historical_comparison",
+        "parameter_selection_performed": False,
+        "periods": PERIODS,
+        "strategies": STRATEGIES,
+        "results": results,
+        "skipped": skipped,
+        "failures": failures,
+        "later_holdout_summary": summary,
+        "code_universe": sorted({row["code"] for row in results}),
+        "code_universe_size": len({row["code"] for row in results}),
+    }
 
 
 def main():

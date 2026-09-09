@@ -1,10 +1,12 @@
 {
+  "evaluation_kind": "fixed_historical_comparison",
+  "parameter_selection_performed": false,
   "periods": {
-    "train": {
+    "development_historical": {
       "start": "2021-01-01",
       "end": "2023-12-31"
     },
-    "out_of_sample": {
+    "later_holdout": {
       "start": "2024-01-01",
       "end": "2025-12-31"
     }
@@ -19,7 +21,7 @@
   "results": [
     {
       "code": "000565",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.3386,
       "max_drawdown": -0.41807371081738787,
@@ -27,7 +29,7 @@
     },
     {
       "code": "000565",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.0782,
       "max_drawdown": -0.12493868998933175,
@@ -35,7 +37,7 @@
     },
     {
       "code": "000565",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.027,
       "max_drawdown": -0.12795306324320121,
@@ -43,7 +45,7 @@
     },
     {
       "code": "000565",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.2832,
       "max_drawdown": -0.29987891799241584,
@@ -51,7 +53,7 @@
     },
     {
       "code": "000565",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.2292,
       "max_drawdown": -0.3402156171946097,
@@ -59,7 +61,7 @@
     },
     {
       "code": "000565",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.1475,
       "max_drawdown": -0.488610308436281,
@@ -67,7 +69,7 @@
     },
     {
       "code": "000565",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.1049,
       "max_drawdown": -0.12069699999999997,
@@ -75,7 +77,7 @@
     },
     {
       "code": "000565",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.1378,
       "max_drawdown": -0.13802100000000006,
@@ -83,7 +85,7 @@
     },
     {
       "code": "000565",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.1669,
       "max_drawdown": -0.16891534859965096,
@@ -91,7 +93,7 @@
     },
     {
       "code": "000565",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.1863,
       "max_drawdown": -0.32833550671990896,
@@ -99,7 +101,7 @@
     },
     {
       "code": "000858",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": -0.3885,
       "max_drawdown": -0.47745712137186597,
@@ -107,7 +109,7 @@
     },
     {
       "code": "000858",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.3137,
       "max_drawdown": -0.0910852342170146,
@@ -115,7 +117,7 @@
     },
     {
       "code": "000858",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.1123,
       "max_drawdown": -0.20218806671780012,
@@ -123,7 +125,7 @@
     },
     {
       "code": "000858",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.1674,
       "max_drawdown": -0.23321962754967623,
@@ -131,7 +133,7 @@
     },
     {
       "code": "000858",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.1773,
       "max_drawdown": -0.2649775347141846,
@@ -139,7 +141,7 @@
     },
     {
       "code": "000858",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": -0.1322,
       "max_drawdown": -0.3034105513186439,
@@ -147,7 +149,7 @@
     },
     {
       "code": "000858",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": -0.1054,
       "max_drawdown": -0.1558223915519016,
@@ -155,7 +157,7 @@
     },
     {
       "code": "000858",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": -0.1186,
       "max_drawdown": -0.2253791375680387,
@@ -163,7 +165,7 @@
     },
     {
       "code": "000858",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0469,
       "max_drawdown": -0.05627032760213108,
@@ -171,7 +173,7 @@
     },
     {
       "code": "000858",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.102,
       "max_drawdown": -0.13147800382357172,
@@ -179,7 +181,7 @@
     },
     {
       "code": "002151",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": -0.3957,
       "max_drawdown": -0.5141566504734526,
@@ -187,7 +189,7 @@
     },
     {
       "code": "002151",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.3114,
       "max_drawdown": -0.08952463211347618,
@@ -195,7 +197,7 @@
     },
     {
       "code": "002151",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": -0.143,
       "max_drawdown": -0.2618358391100286,
@@ -203,7 +205,7 @@
     },
     {
       "code": "002151",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.142,
       "max_drawdown": -0.14799388128728114,
@@ -211,7 +213,7 @@
     },
     {
       "code": "002151",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.212,
       "max_drawdown": -0.23285381953364637,
@@ -219,7 +221,7 @@
     },
     {
       "code": "002151",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.4578,
       "max_drawdown": -0.3206270273582869,
@@ -227,7 +229,7 @@
     },
     {
       "code": "002151",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.2322,
       "max_drawdown": -0.02869912704579146,
@@ -235,7 +237,7 @@
     },
     {
       "code": "002151",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.1241,
       "max_drawdown": -0.20487229474676086,
@@ -243,7 +245,7 @@
     },
     {
       "code": "002151",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.0227,
       "max_drawdown": -0.05149400547665054,
@@ -251,7 +253,7 @@
     },
     {
       "code": "002151",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.2492,
       "max_drawdown": -0.16872679891891804,
@@ -259,7 +261,7 @@
     },
     {
       "code": "002891",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": -0.3589,
       "max_drawdown": -0.5630164023347253,
@@ -267,7 +269,7 @@
     },
     {
       "code": "002891",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": -0.1426,
       "max_drawdown": -0.2568640808281827,
@@ -275,7 +277,7 @@
     },
     {
       "code": "002891",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.0565,
       "max_drawdown": -0.18130961525968933,
@@ -283,7 +285,7 @@
     },
     {
       "code": "002891",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.3436,
       "max_drawdown": -0.35232009434952205,
@@ -291,7 +293,7 @@
     },
     {
       "code": "002891",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.446,
       "max_drawdown": -0.47169359701395325,
@@ -299,7 +301,7 @@
     },
     {
       "code": "002891",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 1.0264,
       "max_drawdown": -0.3143097492562917,
@@ -307,7 +309,7 @@
     },
     {
       "code": "002891",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.0213,
       "max_drawdown": -0.054190879220588975,
@@ -315,7 +317,7 @@
     },
     {
       "code": "002891",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": -0.2283,
       "max_drawdown": -0.2767292579263856,
@@ -323,7 +325,7 @@
     },
     {
       "code": "002891",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.278,
       "max_drawdown": -0.10253007131103814,
@@ -331,7 +333,7 @@
     },
     {
       "code": "002891",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.5564,
       "max_drawdown": -0.2174696930956671,
@@ -339,7 +341,7 @@
     },
     {
       "code": "600120",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": -0.1889,
       "max_drawdown": -0.24607865519901737,
@@ -347,7 +349,7 @@
     },
     {
       "code": "600120",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.1551,
       "max_drawdown": -0.09549972912334606,
@@ -355,7 +357,7 @@
     },
     {
       "code": "600120",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": -0.0068,
       "max_drawdown": -0.14685231891116282,
@@ -363,7 +365,7 @@
     },
     {
       "code": "600120",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0851,
       "max_drawdown": -0.1369296660896308,
@@ -371,7 +373,7 @@
     },
     {
       "code": "600120",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.1558,
       "max_drawdown": -0.20147841823209714,
@@ -379,7 +381,7 @@
     },
     {
       "code": "600120",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.7545,
       "max_drawdown": -0.40082313928070323,
@@ -387,7 +389,7 @@
     },
     {
       "code": "600120",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.1773,
       "max_drawdown": -0.04844355653389939,
@@ -395,7 +397,7 @@
     },
     {
       "code": "600120",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 1.3781,
       "max_drawdown": -0.14349720726350695,
@@ -403,7 +405,7 @@
     },
     {
       "code": "600120",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.2707,
       "max_drawdown": -0.20172580759250028,
@@ -411,7 +413,7 @@
     },
     {
       "code": "600120",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.1024,
       "max_drawdown": -0.32710701035868756,
@@ -419,7 +421,7 @@
     },
     {
       "code": "600406",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.5054,
       "max_drawdown": -0.43023951771466945,
@@ -427,7 +429,7 @@
     },
     {
       "code": "600406",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.0622,
       "max_drawdown": -0.10258733482902381,
@@ -435,7 +437,7 @@
     },
     {
       "code": "600406",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.1468,
       "max_drawdown": -0.24156494958442346,
@@ -443,7 +445,7 @@
     },
     {
       "code": "600406",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0183,
       "max_drawdown": -0.17797951307536308,
@@ -451,7 +453,7 @@
     },
     {
       "code": "600406",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.1478,
       "max_drawdown": -0.29707954880769144,
@@ -459,7 +461,7 @@
     },
     {
       "code": "600406",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.0718,
       "max_drawdown": -0.21516125552262508,
@@ -467,7 +469,7 @@
     },
     {
       "code": "600406",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.0304,
       "max_drawdown": -0.023854735624336217,
@@ -475,7 +477,7 @@
     },
     {
       "code": "600406",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": -0.1614,
       "max_drawdown": -0.16767244947117496,
@@ -483,7 +485,7 @@
     },
     {
       "code": "600406",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0837,
       "max_drawdown": -0.12567234071305045,
@@ -491,7 +493,7 @@
     },
     {
       "code": "600406",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.1314,
       "max_drawdown": -0.18880106483743023,
@@ -499,7 +501,7 @@
     },
     {
       "code": "600415",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.3743,
       "max_drawdown": -0.3375826669739898,
@@ -507,7 +509,7 @@
     },
     {
       "code": "600415",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": -0.0913,
       "max_drawdown": -0.1408668508200586,
@@ -515,7 +517,7 @@
     },
     {
       "code": "600415",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": -0.0709,
       "max_drawdown": -0.18673699999999996,
@@ -523,7 +525,7 @@
     },
     {
       "code": "600415",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0998,
       "max_drawdown": -0.1632382472544945,
@@ -531,7 +533,7 @@
     },
     {
       "code": "600415",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.1546,
       "max_drawdown": -0.2667460658294847,
@@ -539,7 +541,7 @@
     },
     {
       "code": "600415",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 1.2855,
       "max_drawdown": -0.31666963648728275,
@@ -547,7 +549,7 @@
     },
     {
       "code": "600415",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.0646,
       "max_drawdown": -0.10190511353210698,
@@ -555,7 +557,7 @@
     },
     {
       "code": "600415",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.0164,
       "max_drawdown": -0.17924096194263303,
@@ -563,7 +565,7 @@
     },
     {
       "code": "600415",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.0411,
       "max_drawdown": -0.09061481981185557,
@@ -571,7 +573,7 @@
     },
     {
       "code": "600415",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.5744,
       "max_drawdown": -0.1933880336037781,
@@ -579,7 +581,7 @@
     },
     {
       "code": "600446",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": -0.2716,
       "max_drawdown": -0.5092230294311616,
@@ -587,7 +589,7 @@
     },
     {
       "code": "600446",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.1604,
       "max_drawdown": -0.1090407282279735,
@@ -595,7 +597,7 @@
     },
     {
       "code": "600446",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.4617,
       "max_drawdown": -0.14932002513413875,
@@ -603,7 +605,7 @@
     },
     {
       "code": "600446",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.0029,
       "max_drawdown": -0.1407507687773071,
@@ -611,7 +613,7 @@
     },
     {
       "code": "600446",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.0464,
       "max_drawdown": -0.33922585414562145,
@@ -619,7 +621,7 @@
     },
     {
       "code": "600446",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.4091,
       "max_drawdown": -0.3325319605131673,
@@ -627,7 +629,7 @@
     },
     {
       "code": "600446",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": -0.011,
       "max_drawdown": -0.13252880000000006,
@@ -635,7 +637,7 @@
     },
     {
       "code": "600446",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.2336,
       "max_drawdown": -0.27243334635147903,
@@ -643,7 +645,7 @@
     },
     {
       "code": "600446",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0708,
       "max_drawdown": -0.1539063535834035,
@@ -651,7 +653,7 @@
     },
     {
       "code": "600446",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.2991,
       "max_drawdown": -0.39977415190354676,
@@ -659,7 +661,7 @@
     },
     {
       "code": "600795",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.983,
       "max_drawdown": -0.3236891419520472,
@@ -667,7 +669,7 @@
     },
     {
       "code": "600795",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.1432,
       "max_drawdown": -0.08324505924999799,
@@ -675,7 +677,7 @@
     },
     {
       "code": "600795",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": -0.0884,
       "max_drawdown": -0.294766857597708,
@@ -683,7 +685,7 @@
     },
     {
       "code": "600795",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.0005,
       "max_drawdown": -0.21603188300309173,
@@ -691,7 +693,7 @@
     },
     {
       "code": "600795",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.1793,
       "max_drawdown": -0.25051355244146295,
@@ -699,7 +701,7 @@
     },
     {
       "code": "600795",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.266,
       "max_drawdown": -0.3097803702010348,
@@ -707,7 +709,7 @@
     },
     {
       "code": "600795",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": -0.0399,
       "max_drawdown": -0.12878077337492114,
@@ -715,7 +717,7 @@
     },
     {
       "code": "600795",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.0893,
       "max_drawdown": -0.11671463254837475,
@@ -723,7 +725,7 @@
     },
     {
       "code": "600795",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.3508,
       "max_drawdown": -0.06937637323193589,
@@ -731,7 +733,7 @@
     },
     {
       "code": "600795",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.3867,
       "max_drawdown": -0.13515138134227447,
@@ -739,7 +741,7 @@
     },
     {
       "code": "600900",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.3676,
       "max_drawdown": -0.1736356755576526,
@@ -747,7 +749,7 @@
     },
     {
       "code": "600900",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": -0.0265,
       "max_drawdown": -0.08804976186606027,
@@ -755,7 +757,7 @@
     },
     {
       "code": "600900",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.0967,
       "max_drawdown": -0.11282054338385265,
@@ -763,7 +765,7 @@
     },
     {
       "code": "600900",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.0502,
       "max_drawdown": -0.09333255556203698,
@@ -771,7 +773,7 @@
     },
     {
       "code": "600900",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.0293,
       "max_drawdown": -0.1289588716963025,
@@ -779,7 +781,7 @@
     },
     {
       "code": "600900",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.2164,
       "max_drawdown": -0.1308552811242948,
@@ -787,7 +789,7 @@
     },
     {
       "code": "600900",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.0012,
       "max_drawdown": -0.0208223421042097,
@@ -795,7 +797,7 @@
     },
     {
       "code": "600900",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.1267,
       "max_drawdown": -0.07658209169168341,
@@ -803,7 +805,7 @@
     },
     {
       "code": "600900",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.1368,
       "max_drawdown": -0.073183419363939,
@@ -811,7 +813,7 @@
     },
     {
       "code": "600900",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.2031,
       "max_drawdown": -0.08937193126100695,
@@ -819,7 +821,7 @@
     },
     {
       "code": "601218",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.0078,
       "max_drawdown": -0.5575957864340321,
@@ -827,7 +829,7 @@
     },
     {
       "code": "601218",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": -0.0876,
       "max_drawdown": -0.13176798448005034,
@@ -835,7 +837,7 @@
     },
     {
       "code": "601218",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": 0.3582,
       "max_drawdown": -0.1776008754276189,
@@ -843,7 +845,7 @@
     },
     {
       "code": "601218",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.1445,
       "max_drawdown": -0.2105983221406447,
@@ -851,7 +853,7 @@
     },
     {
       "code": "601218",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.1707,
       "max_drawdown": -0.3320320663778273,
@@ -859,7 +861,7 @@
     },
     {
       "code": "601218",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": 0.2892,
       "max_drawdown": -0.41731543008001376,
@@ -867,7 +869,7 @@
     },
     {
       "code": "601218",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": 0.6306,
       "max_drawdown": -0.051784009910037974,
@@ -875,7 +877,7 @@
     },
     {
       "code": "601218",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": 0.164,
       "max_drawdown": -0.17753865978131045,
@@ -883,7 +885,7 @@
     },
     {
       "code": "601218",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": 0.0676,
       "max_drawdown": -0.17216504568128538,
@@ -891,7 +893,7 @@
     },
     {
       "code": "601218",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": 0.0661,
       "max_drawdown": -0.24409739684003123,
@@ -899,7 +901,7 @@
     },
     {
       "code": "603605",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "buy_and_hold",
       "total_return": 0.0976,
       "max_drawdown": -0.30418242212106006,
@@ -907,7 +909,7 @@
     },
     {
       "code": "603605",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "three_factors",
       "total_return": 0.149,
       "max_drawdown": -0.24143356173081384,
@@ -915,7 +917,7 @@
     },
     {
       "code": "603605",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "supertrend_ma",
       "total_return": -0.0725,
       "max_drawdown": -0.24381958480078963,
@@ -923,7 +925,7 @@
     },
     {
       "code": "603605",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.2254,
       "max_drawdown": -0.2762055810468917,
@@ -931,7 +933,7 @@
     },
     {
       "code": "603605",
-      "period": "train",
+      "period": "development_historical",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.3729,
       "max_drawdown": -0.4539533465472607,
@@ -939,7 +941,7 @@
     },
     {
       "code": "603605",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "buy_and_hold",
       "total_return": -0.2807,
       "max_drawdown": -0.42345644535484067,
@@ -947,7 +949,7 @@
     },
     {
       "code": "603605",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "three_factors",
       "total_return": -0.0127,
       "max_drawdown": -0.2198282135777192,
@@ -955,7 +957,7 @@
     },
     {
       "code": "603605",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "supertrend_ma",
       "total_return": -0.2261,
       "max_drawdown": -0.2739272577325778,
@@ -963,7 +965,7 @@
     },
     {
       "code": "603605",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_pullback_maw_macd",
       "total_return": -0.1422,
       "max_drawdown": -0.17317620250675467,
@@ -971,7 +973,7 @@
     },
     {
       "code": "603605",
-      "period": "out_of_sample",
+      "period": "later_holdout",
       "strategy": "trend_following_maw_macd",
       "total_return": -0.2044,
       "max_drawdown": -0.21936655172356162,
@@ -985,7 +987,7 @@
     }
   ],
   "failures": [],
-  "out_of_sample_summary": {
+  "later_holdout_summary": {
     "buy_and_hold": {
       "mean_return": 0.3759416666666667,
       "median_return": 0.2776,
@@ -1017,5 +1019,19 @@
       "beat_buy_and_hold_ratio": 0.3333333333333333
     }
   },
-  "tuning_performed": false
+  "code_universe": [
+    "000565",
+    "000858",
+    "002151",
+    "002891",
+    "600120",
+    "600406",
+    "600415",
+    "600446",
+    "600795",
+    "600900",
+    "601218",
+    "603605"
+  ],
+  "code_universe_size": 12
 }

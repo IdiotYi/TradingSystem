@@ -19,7 +19,7 @@ const STRATEGIES = [
   { value: 'supertrend_ma', label: 'SuperTrend+MA' },
   { value: 'supertrend_wma', label: 'SuperTrend+WMA' },
   { value: 'trend_pullback_maw_macd', label: 'MAW+MACD中长线趋势回撤' },
-  { value: 'trend_following_maw_macd', label: 'MAW+MACD趋势增强（收益优先）' },
+  { value: 'trend_following_maw_macd', label: 'MAW+MACD趋势增强（实验）' },
   { value: 'buy_and_hold', label: '买入持有' },
 ]
 
@@ -229,8 +229,8 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
           type="info"
           showIcon
           style={{ width: '100%', marginTop: 12 }}
-          message="收益优先趋势增强规则"
-          description="MAW20/60/120 与 MACD(12,26,9) 判断趋势；强趋势允许100%持仓，不因短期MACD回落机械止盈；连续3日中长期趋势破坏后减仓或清仓，成本亏损25%灾难止损；信号按当日收盘价成交。"
+          message="实验性趋势增强规则"
+          description="MAW20/60/120 与 MACD(12,26,9) 判断趋势；强趋势允许100%持仓，不因短期MACD回落机械止盈；连续3日中长期趋势破坏后减仓或清仓，成本亏损25%灾难止损。固定本地历史比较未证明其优于买入持有或SuperTrend+MA；信号按当日收盘价成交。"
         />
       )}
 

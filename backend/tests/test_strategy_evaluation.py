@@ -30,8 +30,8 @@ def test_evaluator_uses_fixed_windows_and_all_strategies(tmp_path, monkeypatch):
     monkeypatch.setattr("app.services.strategy_evaluation.run_backtest", fake_run)
     result = evaluate_cached_strategies(tmp_path, ["600001"])
     assert result["periods"] == {
-        "train": {"start": "2021-01-01", "end": "2023-12-31"},
-        "out_of_sample": {"start": "2024-01-01", "end": "2025-12-31"},
+        "development_historical": {"start": "2021-01-01", "end": "2023-12-31"},
+        "later_holdout": {"start": "2024-01-01", "end": "2025-12-31"},
     }
     assert {call[3] for call in calls} == {"buy_and_hold", "three_factors", "supertrend_ma", "trend_pullback_maw_macd", "trend_following_maw_macd"}
     assert len(result["results"]) == 10
@@ -58,7 +58,7 @@ def test_evaluator_aggregates_oos_metrics(tmp_path, monkeypatch):
                 "summary": {"total_return": ret, "final_assets": curve[-1]}, "portfolio_value": curve}
     monkeypatch.setattr("app.services.strategy_evaluation.run_backtest", fake_run)
     result = evaluate_cached_strategies(tmp_path, ["600001", "600002"])
-    agg = result["out_of_sample_summary"]["trend_following_maw_macd"]
+    agg = result["later_holdout_summary"]["trend_following_maw_macd"]
     assert agg["mean_return"] == pytest.approx(.25)
     assert agg["median_return"] == pytest.approx(.25)
     assert agg["mean_max_drawdown"] == pytest.approx(-.20)
@@ -88,8 +88,8 @@ def test_evaluator_never_calls_normal_loader_and_segregates_failures(tmp_path, m
     result = evaluate_cached_strategies(tmp_path, ["600001"])
     assert all("error" not in row for row in result["results"])
     assert result["failures"] == [
-        {"code": "600001", "period": "train", "strategy": "three_factors", "reason": "strategy failed"},
-        {"code": "600001", "period": "out_of_sample", "strategy": "three_factors", "reason": "strategy failed"},
+        {"code": "600001", "period": "development_historical", "strategy": "three_factors", "reason": "strategy failed"},
+        {"code": "600001", "period": "later_holdout", "strategy": "three_factors", "reason": "strategy failed"},
     ]
 
 
