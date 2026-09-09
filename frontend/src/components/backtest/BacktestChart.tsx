@@ -8,6 +8,48 @@ interface Props {
 }
 
 const BacktestChart: React.FC<Props> = ({ data }) => {
+
+  if (data.strategy_name === 'trend_pullback_maw_macd') {
+    const { dates, open, high, low, close, maw20, maw60, maw120, macd_dif, macd_dea, macd_histogram, target_position, position_ratio, trades } = data
+    const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
+    const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
+    const markData = trades.map(t => {
+      const i = dates.indexOf(t.date)
+      const buy = t.direction === '买入'
+      return i < 0 ? null : { coord: [t.date, buy ? (low[i] ?? t.price) * 0.985 : (high[i] ?? t.price) * 1.015], symbol: 'triangle', symbolRotate: buy ? 0 : 180, symbolSize: 14, itemStyle: { color: buy ? '#ef5350' : '#26a69a' }, label: { show: false } }
+    }).filter(Boolean)
+    const histogram = macd_histogram.map(v => ({ value: v, itemStyle: { color: (v ?? 0) >= 0 ? '#ef5350' : '#26a69a' } }))
+    const option = {
+      backgroundColor: '#0d1117', animation: false,
+      axisPointer: { link: [{ xAxisIndex: 'all' }] },
+      legend: { data: ['K线','MAW20','MAW60','MAW120','DIF','DEA','MACD柱','目标仓位','实际仓位'], top: 8, textStyle: { color:'#8b949e' } },
+      tooltip: { trigger:'axis', axisPointer:{type:'cross'}, backgroundColor:'rgba(22,27,34,.95)', borderColor:'#30363d', textStyle:{color:'#e6edf3'} },
+      grid: [
+        { left:'6%', right:'3%', top:50, height:'43%' },
+        { left:'6%', right:'3%', top:'57%', height:'16%' },
+        { left:'6%', right:'3%', top:'78%', bottom:70 },
+      ],
+      xAxis: [0,1,2].map(i => ({ type:'category', data:dates, gridIndex:i, boundaryGap:true, axisLabel:{show:i===2,color:'#8b949e',formatter:(v:string)=>v.slice(0,7),interval:Math.floor(dates.length/8)}, axisLine:{lineStyle:{color:'#30363d'}} })),
+      yAxis: [
+        { gridIndex:0, scale:true, axisLabel:{color:'#8b949e',formatter:(v:number)=>v.toFixed(priceDecimals)}, splitLine:{lineStyle:{color:'#161b22'}} },
+        { gridIndex:1, scale:true, axisLabel:{color:'#8b949e'}, splitLine:{lineStyle:{color:'#161b22'}} },
+        { gridIndex:2, min:0, max:1, axisLabel:{color:'#8b949e',formatter:(v:number)=>`${(v*100).toFixed(0)}%`}, splitLine:{lineStyle:{color:'#161b22'}} },
+      ],
+      dataZoom: [{type:'inside',xAxisIndex:[0,1,2],start:0,end:100},{type:'slider',xAxisIndex:[0,1,2],bottom:18,start:0,end:100,borderColor:'#30363d',textStyle:{color:'#8b949e'}}],
+      series: [
+        {name:'K线',type:'candlestick',xAxisIndex:0,yAxisIndex:0,data:candleData,itemStyle:{color:'#ef5350',color0:'#26a69a',borderColor:'#ef5350',borderColor0:'#26a69a'},markPoint:{data:markData,animation:false}},
+        {name:'MAW20',type:'line',xAxisIndex:0,yAxisIndex:0,data:maw20,showSymbol:false,lineStyle:{color:'#ffd700'}},
+        {name:'MAW60',type:'line',xAxisIndex:0,yAxisIndex:0,data:maw60,showSymbol:false,lineStyle:{color:'#1890ff'}},
+        {name:'MAW120',type:'line',xAxisIndex:0,yAxisIndex:0,data:maw120,showSymbol:false,lineStyle:{color:'#b57bee',width:2}},
+        {name:'DIF',type:'line',xAxisIndex:1,yAxisIndex:1,data:macd_dif,showSymbol:false,lineStyle:{color:'#ffd700'}},
+        {name:'DEA',type:'line',xAxisIndex:1,yAxisIndex:1,data:macd_dea,showSymbol:false,lineStyle:{color:'#1890ff'}},
+        {name:'MACD柱',type:'bar',xAxisIndex:1,yAxisIndex:1,data:histogram,barMaxWidth:5},
+        {name:'目标仓位',type:'line',xAxisIndex:2,yAxisIndex:2,data:target_position,showSymbol:false,lineStyle:{color:'#fa8c16',type:'dashed'}},
+        {name:'实际仓位',type:'line',xAxisIndex:2,yAxisIndex:2,data:position_ratio,showSymbol:false,lineStyle:{color:'#52c41a',width:2}},
+      ],
+    }
+    return <ReactECharts option={option} style={{height:850}} opts={{renderer:'canvas'}} />
+  }
   const option = useMemo(() => {
     const {
       dates, open, high, low, close,

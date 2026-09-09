@@ -12,8 +12,10 @@ const TradeTable: React.FC<Props> = ({ trades }) => {
   const priceDecimals = detectPriceDecimals(trades.map(t => t.price))
   const fmtPrice = (n: number) => `¥${n.toFixed(priceDecimals)}`
 
+  const hasSignalDate = trades.some(t => t.signal_date)
   const columns: ColumnsType<Trade & { key: number }> = [
     { title: '日期', dataIndex: 'date', key: 'date', width: 110, fixed: 'left' as const },
+    ...(hasSignalDate ? [{ title: '信号日期', dataIndex: 'signal_date', key: 'signal_date', width: 110, render: (v?: string) => v ?? '-' }] : []),
     {
       title: '方向', dataIndex: 'direction', key: 'direction', width: 70,
       render: (v: string) => <Tag color={v === '买入' ? 'red' : 'cyan'}>{v}</Tag>,
