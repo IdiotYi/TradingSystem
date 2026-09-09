@@ -297,8 +297,9 @@ def _to_list(s: pd.Series) -> list:
 
 def run_backtest(stock_code: str, start_date: str, end_date: str,
                  initial_cash: float, strategy_params: dict,
-                 strategy_name: str = "three_factors") -> dict:
-    df_all = load_stock_data(stock_code)
+                 strategy_name: str = "three_factors",
+                 market_data: pd.DataFrame | None = None) -> dict:
+    df_all = market_data.copy() if market_data is not None else load_stock_data(stock_code)
     df_all = df_all[df_all["日期"] <= end_date].reset_index(drop=True)
 
     if strategy_name in ("three_factors", "three_factors_v2"):
@@ -430,8 +431,33 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     }
     ratios = [value for value in serialized_trend["position_ratio"] if value is not None]
 
+    replay_cash = float(initial_cash)
+    replay_shares = 0
+    trades_by_date = {}
+    for trade in trades:
+        trades_by_date.setdefault(str(trade["date"]), []).append(trade)
+    portfolio_value = []
+    for date, price in zip(df["日期"], close):
+        for trade in trades_by_date.get(str(date), []):
+            quantity = int(trade["shares"])
+            amount = float(trade["amount"])
+            fee = float(trade.get("total_fee", 0.0))
+            if trade["direction"] == "买入":
+                replay_shares += quantity
+                replay_cash -= amount + fee
+            else:
+                replay_shares -= quantity
+                replay_cash += amount - fee
+            reported_cash = trade.get("remaining_cash")
+            if reported_cash is not None and abs(replay_cash - float(reported_cash)) > 0.011:
+                raise ValueError("trade remaining_cash is inconsistent with independent replay")
+        portfolio_value.append(round(replay_cash + replay_shares * float(price), 2))
+    if portfolio_value and abs(portfolio_value[-1] - round(total_assets, 2)) > 0.011:
+        raise ValueError("portfolio curve final value does not match final assets")
+
     return {
         "success": True,
+        "portfolio_value": portfolio_value,
         "strategy_name": strategy_name,
         "dates": df["日期"].tolist(),
         "open": _to_list(open_), "high": _to_list(high),
