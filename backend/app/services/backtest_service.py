@@ -9,7 +9,7 @@ from app.core.three_factors import (
     BIAS_N, MOMENTUM_DAY, SLOPE_N, EFFICIENCY_N, ZSCORE_WINDOW,
 )
 from app.core.indicators import calc_ma, calc_supertrend, calc_kama, calc_maw
-from app.core.trend_pullback import run_trend_pullback
+from app.core.trend_pullback import prepare_trend_pullback_indicators, run_trend_pullback
 from app.services.data_service import load_stock_data
 
 
@@ -328,18 +328,21 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
 
     trend_series = None
     if strategy_name == "trend_pullback_maw_macd":
-        trades_all, _, _, full_series = run_trend_pullback(
-            df_all, initial_cash, _buy_fees, _sell_fees
+        prepared_all = prepare_trend_pullback_indicators(df_all)
+        start_mask = prepared_all["日期"] >= start_date
+        start_idx = int(start_mask.idxmax()) if start_mask.any() else len(prepared_all)
+        prepared = prepared_all.loc[start_mask].reset_index(drop=True)
+        prepared.attrs["history_offset"] = start_idx
+        if start_idx > 0:
+            prepared.attrs["previous_indicators"] = {
+                "dif": prepared_all.at[start_idx - 1, "_macd_dif"],
+                "dea": prepared_all.at[start_idx - 1, "_macd_dea"],
+                "histogram": prepared_all.at[start_idx - 1, "_macd_histogram"],
+            }
+        df = prepared[df_all.columns]
+        trades, final_cash, final_shares, trend_series = run_trend_pullback(
+            df, initial_cash, _buy_fees, _sell_fees, prepared=prepared
         )
-        start_mask = df_all["日期"] >= start_date
-        start_idx = int(start_mask.idxmax()) if start_mask.any() else len(df_all)
-        df = df_all.loc[start_mask].reset_index(drop=True)
-        trend_series = {key: values[start_idx:] for key, values in full_series.items()}
-        valid_dates = set(df["日期"])
-        trades, final_cash, final_shares = run_trend_pullback(
-            df_all, initial_cash, _buy_fees, _sell_fees
-        )[:3]
-        trades = [trade for trade in trades if trade["date"] in valid_dates]
         for trade in trades:
             trade["direction"] = "买入" if trade.pop("action") == "buy" else "卖出"
             trade["total_fee"] = trade.pop("fee")
@@ -348,8 +351,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
             trade.setdefault("stamp_tax", None)
             trade.setdefault("pnl", None)
             trade.setdefault("remaining_cash", round(final_cash, 2))
-        # Re-run on full warm-up history preserves indicator state; reconstruct end state
-        # from the full result, while response/trades are restricted to requested dates.
+        # Indicators retain full-history warmup; portfolio state begins at start_date.
     else:
         df = df_all[df_all["日期"] >= start_date].reset_index(drop=True)
     if df.empty:

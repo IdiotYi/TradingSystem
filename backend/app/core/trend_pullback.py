@@ -18,24 +18,45 @@ def _fee_total(fee_fn: Callable[[float], dict], amount: float) -> float:
     return float(fee_fn(float(amount)).get("total_fee", 0.0))
 
 
-def run_trend_pullback(
-    df: pd.DataFrame,
-    initial_cash: float,
-    buy_fee: Callable[[float], dict],
-    sell_fee: Callable[[float], dict],
-) -> tuple[list[dict], float, int, dict]:
-    """Run the strategy sequentially, executing at each bar's closing price."""
+def prepare_trend_pullback_indicators(df: pd.DataFrame) -> pd.DataFrame:
+    """Return market rows with trend indicators computed over their full history."""
     missing = _REQUIRED_FIELDS.difference(df.columns)
     if missing:
         raise ValueError(f"MAW 必需字段缺失: {', '.join(sorted(missing))}")
 
     data = df.reset_index(drop=True).copy()
-    maw20 = calc_maw(data, 20)
-    maw60 = calc_maw(data, 60)
-    maw120 = calc_maw(data, 120)
-    dif, dea, histogram = calc_macd(data["收盘"])
-    if len(data) and any(series.notna().sum() == 0 for series in (maw20, maw60, maw120)):
+    data["_maw20"] = calc_maw(data, 20)
+    data["_maw60"] = calc_maw(data, 60)
+    data["_maw120"] = calc_maw(data, 120)
+    data["_macd_dif"], data["_macd_dea"], data["_macd_histogram"] = calc_macd(data["收盘"])
+    data["_maw60_lag20"] = data["_maw60"].shift(20)
+    if len(data) and any(data[column].notna().sum() == 0 for column in ("_maw20", "_maw60", "_maw120")):
         raise ValueError("MAW required fields produced no valid values")
+    return data
+
+
+def run_trend_pullback(
+    df: pd.DataFrame,
+    initial_cash: float,
+    buy_fee: Callable[[float], dict],
+    sell_fee: Callable[[float], dict],
+    prepared: pd.DataFrame | None = None,
+) -> tuple[list[dict], float, int, dict]:
+    """Run the strategy sequentially, executing at each bar's closing price."""
+    if prepared is None:
+        data = prepare_trend_pullback_indicators(df)
+    else:
+        attributes = dict(prepared.attrs)
+        data = prepared.reset_index(drop=True).copy()
+        data.attrs.update(attributes)
+    missing = _REQUIRED_FIELDS.difference(data.columns)
+    if missing:
+        raise ValueError(f"MAW 必需字段缺失: {', '.join(sorted(missing))}")
+    indicator_columns = ("_maw20", "_maw60", "_maw120", "_macd_dif", "_macd_dea", "_macd_histogram")
+    if any(column not in data.columns for column in indicator_columns):
+        raise ValueError("Prepared trend data is missing indicator columns")
+    maw20, maw60, maw120 = data["_maw20"], data["_maw60"], data["_maw120"]
+    dif, dea, histogram = data["_macd_dif"], data["_macd_dea"], data["_macd_histogram"]
 
     target_positions: list[float] = []
     position_ratios: list[float] = []
@@ -106,16 +127,26 @@ def run_trend_pullback(
         record("buy", quantity, price, fee, data.at[i, "日期"], reason)
         return True
 
+    history_offset = int(data.attrs.get("history_offset", 0))
+    previous = data.attrs.get("previous_indicators")
+
     for i in range(len(data)):
+        history_i = history_offset + i
         close = float(data.at[i, "收盘"])
         m20, m60, m120 = maw20.iloc[i], maw60.iloc[i], maw120.iloc[i]
         valid = not any(pd.isna(value) for value in (m20, m60, m120))
-        hist_improving = i > 0 and histogram.iloc[i] > histogram.iloc[i - 1]
-        bullish_cross = i > 0 and dif.iloc[i] > dea.iloc[i] and dif.iloc[i - 1] <= dea.iloc[i - 1]
+        previous_histogram = histogram.iloc[i - 1] if i > 0 else (previous["histogram"] if previous else None)
+        previous_dif = dif.iloc[i - 1] if i > 0 else (previous["dif"] if previous else None)
+        previous_dea = dea.iloc[i - 1] if i > 0 else (previous["dea"] if previous else None)
+        hist_improving = previous_histogram is not None and histogram.iloc[i] > previous_histogram
+        bullish_cross = (
+            previous_dif is not None and previous_dea is not None
+            and dif.iloc[i] > dea.iloc[i] and previous_dif <= previous_dea
+        )
         confirmation = hist_improving or bullish_cross
         healthy = (
-            valid and i >= 20 and close > m120 and m60 > m120
-            and not pd.isna(maw60.iloc[i - 20]) and m60 > maw60.iloc[i - 20]
+            valid and history_i >= 20 and close > m120 and m60 > m120
+            and not pd.isna(data.at[i, "_maw60_lag20"]) and m60 > data.at[i, "_maw60_lag20"]
         )
 
         target = 0.0
