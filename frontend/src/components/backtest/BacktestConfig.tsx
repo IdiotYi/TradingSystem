@@ -19,6 +19,7 @@ const STRATEGIES = [
   { value: 'supertrend_ma', label: 'SuperTrend+MA' },
   { value: 'supertrend_wma', label: 'SuperTrend+WMA' },
   { value: 'trend_pullback_maw_macd', label: 'MAW+MACD中长线趋势回撤' },
+  { value: 'trend_following_maw_macd', label: 'MAW+MACD趋势增强（收益优先）' },
   { value: 'buy_and_hold', label: '买入持有' },
 ]
 
@@ -38,7 +39,14 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
       end_date: values.end_date.format('YYYY-MM-DD'),
       initial_cash: num(values.initial_cash, 100000),
       strategy_name: values.strategy_name,
-      strategy_params: values.strategy_name === 'three_factors' || values.strategy_name === 'three_factors_v2' ? {
+      strategy_params: values.strategy_name === 'trend_pullback_maw_macd' || values.strategy_name === 'trend_following_maw_macd' ? {
+        maw_short_period: p.maw_short_period,
+        maw_medium_period: p.maw_medium_period,
+        maw_long_period: p.maw_long_period,
+        maw_slope_days: p.maw_slope_days,
+        min_rebalance_delta: p.min_rebalance_delta,
+        min_buy_interval_days: p.min_buy_interval_days,
+      } as StrategyParams : values.strategy_name === 'three_factors' || values.strategy_name === 'three_factors_v2' ? {
         score_rising_days: num(values.score_rising_days, p.score_rising_days),
         oversold_std_mult: num(values.oversold_std_mult, p.oversold_std_mult),
         take_profit_pct: pct(values.take_profit_pct, p.take_profit_pct),
@@ -213,6 +221,16 @@ const BacktestConfig: React.FC<Props> = ({ stockCode, onRun, loading }) => {
           style={{ width: '100%', marginTop: 12 }}
           message="中长线固定规则"
           description="MAW20/60/120 判断趋势与回撤，MACD(12,26,9) 确认动能；最大仓位80%，加仓至少间隔5个交易日；成本亏损12%减仓、18%清仓；信号按当日收盘价成交。"
+        />
+      )}
+
+      {strategy === 'trend_following_maw_macd' && (
+        <Alert
+          type="info"
+          showIcon
+          style={{ width: '100%', marginTop: 12 }}
+          message="收益优先趋势增强规则"
+          description="MAW20/60/120 与 MACD(12,26,9) 判断趋势；强趋势允许100%持仓，不因短期MACD回落机械止盈；连续3日中长期趋势破坏后减仓或清仓，成本亏损25%灾难止损；信号按当日收盘价成交。"
         />
       )}
 

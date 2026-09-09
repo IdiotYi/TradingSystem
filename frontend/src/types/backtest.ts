@@ -5,6 +5,7 @@ export type StockStrategyName =
   | 'supertrend_wma'
   | 'buy_and_hold'
   | 'trend_pullback_maw_macd'
+  | 'trend_following_maw_macd'
 
 export interface StrategyParams {
   score_rising_days: number

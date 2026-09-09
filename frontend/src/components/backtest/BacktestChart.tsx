@@ -10,7 +10,7 @@ interface Props {
 const BacktestChart: React.FC<Props> = ({ data }) => {
 
     const chart = useMemo(() => {
-      if (data.strategy_name === 'trend_pullback_maw_macd') {
+      if (data.strategy_name === 'trend_pullback_maw_macd' || data.strategy_name === 'trend_following_maw_macd') {
       const { dates, open, high, low, close, maw20, maw60, maw120, macd_dif, macd_dea, macd_histogram, target_position, position_ratio, trades } = data
       const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
       const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
