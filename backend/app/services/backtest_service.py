@@ -10,6 +10,7 @@ from app.core.three_factors import (
 )
 from app.core.indicators import calc_ma, calc_supertrend, calc_kama, calc_maw
 from app.core.trend_pullback import prepare_trend_pullback_indicators, run_trend_pullback
+from app.core.trend_following import prepare_trend_following_indicators, run_trend_following
 from app.services.data_service import load_stock_data
 
 
@@ -327,8 +328,10 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         df_all["st_lower"] = st_lo
 
     trend_series = None
-    if strategy_name == "trend_pullback_maw_macd":
-        prepared_all = prepare_trend_pullback_indicators(
+    if strategy_name in ("trend_pullback_maw_macd", "trend_following_maw_macd"):
+        prepare_fn = prepare_trend_following_indicators if strategy_name == "trend_following_maw_macd" else prepare_trend_pullback_indicators
+        run_fn = run_trend_following if strategy_name == "trend_following_maw_macd" else run_trend_pullback
+        prepared_all = prepare_fn(
             df_all,
             short_period=strategy_params.get("maw_short_period", 20),
             medium_period=strategy_params.get("maw_medium_period", 60),
@@ -346,7 +349,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
                 "histogram": prepared_all.at[start_idx - 1, "_macd_histogram"],
             }
         df = prepared[df_all.columns]
-        trades, final_cash, final_shares, trend_series = run_trend_pullback(
+        trades, final_cash, final_shares, trend_series = run_fn(
             df, initial_cash, _buy_fees, _sell_fees, prepared=prepared, params=strategy_params
         )
         for trade in trades:
@@ -357,7 +360,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     if df.empty:
         raise ValueError(f"{start_date} ~ {end_date} 期间无交易数据")
 
-    if strategy_name == "trend_pullback_maw_macd":
+    if strategy_name in ("trend_pullback_maw_macd", "trend_following_maw_macd"):
         pass
     elif strategy_name == "buy_and_hold":
         trades, final_cash, final_shares = _run_buy_and_hold(df, initial_cash)
@@ -462,6 +465,6 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
             "profit_loss_ratio": profit_loss_ratio,
             "max_position_ratio": round(max(ratios), 6) if ratios else 0.0,
             "average_position_ratio": round(sum(ratios) / len(ratios), 6) if ratios else 0.0,
-            "rebalance_count": len(trades) if strategy_name == "trend_pullback_maw_macd" else 0,
+            "rebalance_count": len(trades) if strategy_name in ("trend_pullback_maw_macd", "trend_following_maw_macd") else 0,
         },
     }

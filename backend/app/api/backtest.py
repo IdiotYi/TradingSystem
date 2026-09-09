@@ -40,6 +40,7 @@ class BacktestRequest(BaseModel):
     strategy_name: Literal[
         "three_factors", "three_factors_v2", "supertrend_ma",
         "supertrend_wma", "buy_and_hold", "trend_pullback_maw_macd",
+        "trend_following_maw_macd",
     ] = "three_factors"
     strategy_params: StrategyParams = StrategyParams()
 

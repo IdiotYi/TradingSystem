@@ -127,3 +127,16 @@ def test_trend_strategy_missing_maw_columns_returns_400(monkeypatch):
     response = client.post("/api/backtest/run", json=_request())
     assert response.status_code == 400
     assert "MAW" in response.json()["detail"]
+
+def test_return_focused_trend_strategy_is_registered_and_aligned(monkeypatch):
+    monkeypatch.setattr("app.services.backtest_service.load_stock_data", lambda _: _frame())
+    response = client.post("/api/backtest/run", json=_request("trend_following_maw_macd"))
+    assert response.status_code == 200, response.text
+    data = response.json()
+    assert data["strategy_name"] == "trend_following_maw_macd"
+    assert all(len(data[name]) == len(data["dates"]) for name in (
+        "maw20", "maw60", "maw120", "macd_dif", "macd_dea",
+        "macd_histogram", "target_position", "position_ratio",
+    ))
+    assert all(trade["signal_date"] == trade["date"] for trade in data["trades"])
+
