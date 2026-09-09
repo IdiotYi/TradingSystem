@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from app.core.indicators import calc_ma, calc_supertrend
+from app.core.indicators import calc_ma, calc_macd, calc_supertrend
 
 
 def make_series(values):
@@ -23,6 +23,25 @@ class TestCalcMa:
     def test_ma_length_matches_input(self):
         close = make_series(range(20))
         assert len(calc_ma(close, 5)) == 20
+
+
+class TestCalcMacd:
+    def test_uses_adjust_false_ema_formulas(self):
+        close = pd.Series(
+            [10.0, 11.0, 13.0, 12.0, 15.0],
+            index=pd.date_range("2026-01-01", periods=5, freq="D"),
+        )
+
+        dif, dea, histogram = calc_macd(close, fast=2, slow=3, signal=2)
+
+        expected_dif = (
+            close.ewm(span=2, adjust=False).mean()
+            - close.ewm(span=3, adjust=False).mean()
+        )
+        expected_dea = expected_dif.ewm(span=2, adjust=False).mean()
+        pd.testing.assert_series_equal(dif, expected_dif)
+        pd.testing.assert_series_equal(dea, expected_dea)
+        pd.testing.assert_series_equal(histogram, dif - dea)
 
 
 class TestCalcSupertrend:

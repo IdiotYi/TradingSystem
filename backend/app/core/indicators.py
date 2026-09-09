@@ -8,6 +8,21 @@ def calc_ma(close: pd.Series, period: int) -> pd.Series:
     return close.rolling(window=period).mean()
 
 
+def calc_macd(
+    close: pd.Series,
+    fast: int = 12,
+    slow: int = 26,
+    signal: int = 9,
+) -> tuple[pd.Series, pd.Series, pd.Series]:
+    """Calculate MACD DIF, DEA, and histogram series."""
+    fast_ema = close.ewm(span=fast, adjust=False).mean()
+    slow_ema = close.ewm(span=slow, adjust=False).mean()
+    dif = fast_ema - slow_ema
+    dea = dif.ewm(span=signal, adjust=False).mean()
+    histogram = dif - dea
+    return dif, dea, histogram
+
+
 def calc_maw(df: pd.DataFrame, period: int) -> pd.Series:
     """
     Turnover-weighted MA of daily VWAP, with qfq adjustment.
