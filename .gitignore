@@ -30,3 +30,6 @@ frontend/dist/
 
 # Isolated feature worktrees
 .worktrees/
+
+# Isolated feature worktrees
+.worktrees/
