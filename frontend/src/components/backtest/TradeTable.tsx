@@ -43,6 +43,10 @@ const TradeTable: React.FC<Props> = ({ trades }) => {
 
   const totalFees = trades.reduce((s, t) => s + t.total_fee, 0)
   const totalPnl = trades.filter(t => t.pnl != null).reduce((s, t) => s + (t.pnl ?? 0), 0)
+  const summaryLeadingColumns = 9 + (hasSignalDate ? 1 : 0)
+  const totalFeeColumnIndex = summaryLeadingColumns
+  const pnlColumnIndex = totalFeeColumnIndex + 1
+  const cashColumnIndex = pnlColumnIndex + 1
 
   return (
     <Table
@@ -54,16 +58,16 @@ const TradeTable: React.FC<Props> = ({ trades }) => {
       style={{ background: '#161b22' }}
       summary={() => (
         <Table.Summary.Row>
-          <Table.Summary.Cell index={0} colSpan={9} align="right">
+          <Table.Summary.Cell index={0} colSpan={summaryLeadingColumns} align="right">
             <b style={{ color: '#8b949e' }}>合计手续费</b>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={1} align="right">
+          <Table.Summary.Cell index={totalFeeColumnIndex} align="right">
             <b style={{ color: '#fa8c16' }}>¥{totalFees.toFixed(2)}</b>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={2} align="right">
+          <Table.Summary.Cell index={pnlColumnIndex} align="right">
             <b style={{ color: totalPnl >= 0 ? '#ef5350' : '#26a69a' }}>¥{totalPnl.toFixed(2)}</b>
           </Table.Summary.Cell>
-          <Table.Summary.Cell index={3} />
+          <Table.Summary.Cell index={cashColumnIndex} />
         </Table.Summary.Row>
       )}
     />
