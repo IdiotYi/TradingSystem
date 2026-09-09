@@ -268,3 +268,180 @@ def test_partial_sell_respects_configured_minimum_rebalance_delta(monkeypatch):
     install_sequences(monkeypatch, m20, m60, m120, hist)
     trades, *_ = run_trend_pullback(deterministic_frame(close), 9_000, no_fee, no_fee, params={"min_rebalance_delta":0.25})
     assert not any(t["reason"] == "高位动能减仓" for t in trades)
+
+# Final scoped parameter and independent rule coverage.
+def make_prepared_frame(close, maw20, maw60, maw120, histogram, dif=None, dea=None, slope_days=20):
+    frame = deterministic_frame(close)
+    frame["_maw20"] = np.asarray(maw20, dtype=float)
+    frame["_maw60"] = np.asarray(maw60, dtype=float)
+    frame["_maw120"] = np.asarray(maw120, dtype=float)
+    frame["_macd_histogram"] = np.asarray(histogram, dtype=float)
+    frame["_macd_dif"] = np.ones(len(frame)) if dif is None else np.asarray(dif, dtype=float)
+    frame["_macd_dea"] = np.zeros(len(frame)) if dea is None else np.asarray(dea, dtype=float)
+    frame["_maw60_lag20"] = frame["_maw60"].shift(slope_days)
+    return frame
+
+
+def run_prepared(frame, initial_cash=100_000, params=None):
+    return run_trend_pullback(
+        frame.loc[:, ["日期", "收盘", "成交量", "成交额", "换手率"]],
+        initial_cash,
+        no_fee,
+        no_fee,
+        prepared=frame,
+        params=params,
+    )
+
+
+def base_rule_frame(n=130):
+    close = np.full(n, 130.0)
+    maw20 = np.linspace(90.0, 120.0, n)
+    maw60 = np.linspace(80.0, 105.0, n)
+    maw120 = np.linspace(60.0, 90.0, n)
+    histogram = np.arange(n, dtype=float)
+    return close, maw20, maw60, maw120, histogram
+
+
+def test_maw_slope_days_changes_opening_eligibility():
+    close, m20, m60, m120, hist = base_rule_frame(130)
+    close[-1] = 121.0
+    m20[-1], m60[-1], m120[-1] = 120.0, 119.0, 90.0
+    m60[-3], m60[-20] = 118.0, 120.0
+    short = make_prepared_frame(close, m20, m60, m120, hist, slope_days=2)
+    long = make_prepared_frame(close, m20, m60, m120, hist, slope_days=19)
+
+    short_trades, *_ = run_prepared(short, params={"maw_slope_days": 2})
+    long_trades, *_ = run_prepared(long, params={"maw_slope_days": 19})
+
+    assert short_trades[-1]["date"] == short.at[129, "日期"]
+    assert not long_trades
+
+
+def test_min_buy_interval_days_changes_actual_add_timing():
+    close, m20, m60, m120, hist = base_rule_frame(130)
+    close[120], close[123], close[125] = 121.0, 116.0, 115.0
+    m20[120], m60[120] = 120.0, 110.0
+    m20[123:126], m60[123:126] = 120.0, 113.0
+    prepared = make_prepared_frame(close, m20, m60, m120, hist)
+
+    fast, *_ = run_prepared(prepared, params={"min_buy_interval_days": 3})
+    slow, *_ = run_prepared(prepared, params={"min_buy_interval_days": 5})
+    fast_buys = [t["date"] for t in fast if t["action"] == "buy"]
+    slow_buys = [t["date"] for t in slow if t["action"] == "buy"]
+
+    assert fast_buys[:2] == [prepared.at[120, "日期"], prepared.at[123, "日期"]]
+    assert slow_buys[:2] == [prepared.at[120, "日期"], prepared.at[125, "日期"]]
+
+
+def test_min_rebalance_delta_changes_actual_buy_adjustment():
+    close, m20, m60, m120, hist = base_rule_frame(130)
+    close[120], close[125] = 121.0, 115.0
+    m20[120], m60[120] = 120.0, 110.0
+    m20[125], m60[125] = 120.0, 112.0
+    prepared = make_prepared_frame(close, m20, m60, m120, hist)
+
+    low_delta, *_ = run_prepared(prepared, params={"min_rebalance_delta": 0.15})
+    high_delta, *_ = run_prepared(prepared, params={"min_rebalance_delta": 0.25})
+
+    assert len([t for t in low_delta if t["action"] == "buy"]) == 2
+    assert len([t for t in high_delta if t["action"] == "buy"]) == 1
+
+
+def seeded_position_frame():
+    close, m20, m60, m120, hist = base_rule_frame(130)
+    close[120] = 105.0
+    m20[120], m60[120], m120[120] = 110.0, 104.0, 85.0
+    return close, m20, m60, m120, hist
+
+
+def test_maw60_below_maw120_independently_liquidates():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    m60[-1], m120[-1], close[-1] = 90.0, 91.0, 100.0
+    trades, *_ = run_prepared(make_prepared_frame(close, m20, m60, m120, hist))
+    assert trades[-1]["reason"] == "MAW60跌破MAW120清仓"
+
+
+def test_two_days_below_maw120_independently_liquidates_at_exact_second_day():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    close[-2:] = [89.0, 89.0]
+    m60[-2:], m120[-2:] = [95.0, 95.0], [90.0, 90.0]
+    trades, *_ = run_prepared(make_prepared_frame(close, m20, m60, m120, hist))
+    assert trades[-1]["reason"] == "跌破MAW120两日清仓"
+    assert trades[-1]["date"] == deterministic_frame(close).at[129, "日期"]
+
+
+def test_two_days_below_maw60_independently_reduces_to_forty_percent():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    close[-2:] = [99.0, 99.0]
+    m60[-2:], m120[-2:] = [100.0, 100.0], [90.0, 90.0]
+    trades, _, _, series = run_prepared(make_prepared_frame(close, m20, m60, m120, hist))
+    assert trades[-1]["reason"] == "跌破MAW60减仓"
+    assert series["position_ratio"][-1] <= 0.4
+
+
+def test_exact_twelve_percent_loss_independently_reduces_to_thirty_percent():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    prepared = make_prepared_frame(close, m20, m60, m120, hist)
+    prepared.loc[121:128, "收盘"] = 105.0
+    prepared.loc[121:128, "成交额"] = prepared.loc[121:128, "收盘"] * prepared.loc[121:128, "成交量"]
+    average_entry = 100.0
+    prepared.at[120, "收盘"] = average_entry
+    prepared.at[120, "成交额"] = prepared.at[120, "收盘"] * prepared.at[120, "成交量"]
+    prepared.at[129, "收盘"] = 88.0
+    prepared.at[129, "成交额"] = prepared.at[129, "收盘"] * prepared.at[129, "成交量"]
+    prepared.at[129, "_maw20"], prepared.at[129, "_maw60"], prepared.at[129, "_maw120"] = 110.0, 90.0, 80.0
+    trades, _, _, series = run_prepared(prepared, initial_cash=1_000_000)
+    assert (prepared.at[129, "收盘"] - trades[0]["price"]) / trades[0]["price"] == pytest.approx(-0.12)
+    assert trades[-1]["reason"] == "成本亏损12%减仓"
+    assert series["position_ratio"][-1] <= 0.3
+
+
+def test_exact_eighteen_percent_loss_liquidates():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    close[-1] = 105.0 * 0.82
+    m20[-1], m60[-1], m120[-1] = 110.0, 90.0, 80.0
+    trades, _, shares, _ = run_prepared(make_prepared_frame(close, m20, m60, m120, hist))
+    assert trades[-1]["reason"] == "成本亏损18%清仓"
+    assert shares == 0
+
+
+def test_exact_twelve_percent_maw20_extension_reduces_for_shrinking_histogram():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    m20[-2:] = [110.0, 110.0]
+    close[-2:] = [124.0, 123.2]
+    m60[-2:], m120[-2:] = [105.0, 105.0], [90.0, 90.0]
+    hist[-3:] = [3.0, 2.0, 1.0]
+    trades, *_ = run_prepared(make_prepared_frame(close, m20, m60, m120, hist), initial_cash=1_000_000)
+    assert trades[-1]["reason"] == "高位动能减仓"
+
+
+def test_exact_twenty_percent_maw20_extension_with_bearish_cross_reduces():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    m20[-1] = 110.0
+    close[-1] = 110.0 * 1.20
+    dif, dea = np.ones(130), np.zeros(130)
+    dif[-2:] = [1.0, -1.0]
+    prepared = make_prepared_frame(close, m20, m60, m120, hist, dif, dea)
+    trades, *_ = run_prepared(prepared)
+    assert trades[-1]["reason"] == "高位死叉止盈"
+
+
+def test_profitable_maw20_cross_independently_reduces():
+    close, m20, m60, m120, hist = seeded_position_frame()
+    close[-2:] = [115.0, 109.0]
+    m20[-2:] = [110.0, 110.0]
+    trades, *_ = run_prepared(make_prepared_frame(close, m20, m60, m120, hist))
+    assert trades[-1]["reason"] == "跌破MAW20止盈"
+
+
+def test_recovery_over_maw20_is_an_independent_add_gate():
+    close, m20, m60, m120, hist = base_rule_frame(130)
+    close[120], close[124], close[125] = 105.0, 109.0, 111.0
+    m20[120], m60[120] = 110.0, 104.0
+    m20[124:126], m60[124:126] = [110.0, 110.0], [105.0, 105.0]
+    prepared = make_prepared_frame(close, m20, m60, m120, hist)
+    trades, *_ = run_prepared(prepared)
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert buys[-1]["date"] == prepared.at[125, "日期"]
+    assert buys[-1]["price"] > buys[0]["price"]
+    assert buys[-1]["reason"] == "趋势回撤加仓"
