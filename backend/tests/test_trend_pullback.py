@@ -123,3 +123,91 @@ def test_hard_stop_has_priority_over_other_exit_rules(monkeypatch):
 
     assert trades[-1]["action"] == "sell"
     assert trades[-1]["reason"] == "成本亏损18%清仓"
+
+# Review regression helpers/tests: patch deterministic indicator sequences directly.
+def install_sequences(monkeypatch, maw20, maw60, maw120, histogram, dif=None, dea=None):
+    n = len(maw20)
+    lookup = {20: maw20, 60: maw60, 120: maw120}
+    monkeypatch.setattr("app.core.trend_pullback.calc_maw", lambda df, period: pd.Series(lookup[period], index=df.index))
+    dif_values = np.ones(n) if dif is None else np.asarray(dif, dtype=float)
+    dea_values = np.zeros(n) if dea is None else np.asarray(dea, dtype=float)
+    monkeypatch.setattr(
+        "app.core.trend_pullback.calc_macd",
+        lambda close: (pd.Series(dif_values, index=close.index), pd.Series(dea_values, index=close.index), pd.Series(histogram, index=close.index)),
+    )
+
+
+def deterministic_frame(close):
+    close = np.asarray(close, dtype=float)
+    n = len(close)
+    volume = np.full(n, 10_000.0)
+    return pd.DataFrame({
+        "日期": pd.date_range("2025-01-01", periods=n, freq="B").strftime("%Y-%m-%d"),
+        "收盘": close, "成交量": volume, "成交额": close * volume, "换手率": np.ones(n),
+    })
+
+
+def test_exact_target_mapping_40_60_80(monkeypatch):
+    n = 145
+    close = np.full(n, 130.0); close[-3:] = [123.0, 115.0, 105.0]
+    m20 = np.linspace(90, 120, n); m60 = np.linspace(85, 105, n); m120 = np.linspace(70, 90, n)
+    hist = np.arange(n, dtype=float)
+    install_sequences(monkeypatch, m20, m60, m120, hist)
+    *_, series = run_trend_pullback(deterministic_frame(close), 100_000, no_fee, no_fee)
+    assert series["target_position"][-3:] == [0.4, 0.6, 0.8]
+
+
+def test_add_requires_five_bars_and_price_or_recovery_gate(monkeypatch):
+    n = 150
+    close = np.full(n, 130.0); close[120] = 113.0; close[124] = 108.0; close[125] = 107.0
+    m20 = np.linspace(90, 120, n); m60 = np.linspace(80, 104, n); m120 = np.linspace(70, 90, n)
+    m20[120] = 112.0; m20[124:126] = [110.0, 110.0]
+    m60[120] = 105.0; m60[124:126] = [106.0, 106.0]
+    install_sequences(monkeypatch, m20, m60, m120, np.arange(n, dtype=float))
+    trades, *_ = run_trend_pullback(deterministic_frame(close), 100_000, no_fee, no_fee)
+    buys = [t for t in trades if t["action"] == "buy"]
+    assert buys[0]["date"] == deterministic_frame(close).at[120, "日期"]
+    assert buys[1]["date"] == deterministic_frame(close).at[125, "日期"]
+    assert buys[1]["reason"] == "趋势回撤加仓"
+
+
+def test_matched_exit_suppresses_same_bar_buy_when_rounding_needs_no_sale(monkeypatch):
+    n = 145
+    close = np.full(n, 100.0)
+    m20 = np.linspace(80, 105, n); m60 = np.linspace(75, 100, n); m120 = np.linspace(60, 90, n)
+    hist = np.arange(n, dtype=float)
+    install_sequences(monkeypatch, m20, m60, m120, hist)
+    # A 100-share position is below a .4 reduction target; matched risk rule must still consume bar.
+    def huge_fee(amount): return {"total_fee": 89_900.0 if amount > 50_000 else 0.0}
+    trades, *_ = run_trend_pullback(deterministic_frame(close), 100_000, huge_fee, no_fee)
+    assert not any(t["action"] == "buy" and t["date"] == deterministic_frame(close).at[-1 if False else n-1, "日期"] for t in trades)
+
+
+def test_fee_inclusive_exposure_never_exceeds_eighty_percent(monkeypatch):
+    n = 140; close = np.full(n, 10.0)
+    m20 = np.linspace(8, 11, n); m60 = np.linspace(7, 9.9, n); m120 = np.linspace(5, 8, n)
+    install_sequences(monkeypatch, m20, m60, m120, np.arange(n, dtype=float))
+    def fee(amount): return {"total_fee": amount * 0.10}
+    trades, cash, shares, series = run_trend_pullback(deterministic_frame(close), 100_000, fee, no_fee)
+    assert trades
+    assert max(series["position_ratio"]) <= 0.8 + 1e-12
+    assert shares * close[-1] / (cash + shares * close[-1]) <= 0.8 + 1e-12
+
+
+def test_risk_reduction_prefers_lower_cost_loss_target(monkeypatch):
+    n = 145; close = np.full(n, 130.0); close[120] = 105.0; close[-2:] = [89.0, 88.0]
+    m20 = np.linspace(90, 120, n); m60 = np.linspace(80, 100, n); m120 = np.linspace(65, 85, n)
+    m60[-2:] = [100.0, 100.0]
+    install_sequences(monkeypatch, m20, m60, m120, np.arange(n, dtype=float))
+    trades, *_ = run_trend_pullback(deterministic_frame(close), 100_000, no_fee, no_fee)
+    assert any(t["reason"] == "成本亏损12%减仓" for t in trades)
+
+
+def test_profit_rules_choose_lowest_target(monkeypatch):
+    n = 145; close = np.full(n, 130.0); close[120] = 105.0; close[-2:] = [130.0, 145.0]
+    m20 = np.linspace(90, 115, n); m60 = np.linspace(80, 100, n); m120 = np.linspace(65, 90, n)
+    hist = np.arange(n, dtype=float); hist[-3:] = [3.0, 2.0, 1.0]
+    dif = np.ones(n); dea = np.zeros(n); dif[-2:] = [1.0, -1.0]; dea[-2:] = [0.0, 0.0]
+    install_sequences(monkeypatch, m20, m60, m120, hist, dif, dea)
+    trades, *_ = run_trend_pullback(deterministic_frame(close), 100_000, no_fee, no_fee)
+    assert trades[-1]["reason"] == "高位死叉止盈"

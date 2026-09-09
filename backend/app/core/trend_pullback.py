@@ -87,7 +87,10 @@ def run_trend_pullback(
         while quantity > 0:
             amount = quantity * price
             fee = _fee_total(buy_fee, amount)
-            if amount + fee <= cash + 1e-9:
+            post_cash = cash - amount - fee
+            post_assets = post_cash + (shares + quantity) * price
+            post_ratio = ((shares + quantity) * price / post_assets) if post_assets > 0 else 0.0
+            if amount + fee <= cash + 1e-9 and post_ratio <= 0.8 + 1e-12:
                 break
             quantity -= _LOT
         if quantity <= 0:
@@ -139,11 +142,14 @@ def run_trend_pullback(
                 and m20 <= maw20.iloc[i - 1]
             )
             if loss <= -0.18:
-                acted = sell_to_ratio(i, 0.0, "成本亏损18%清仓")
+                sell_to_ratio(i, 0.0, "成本亏损18%清仓")
+                acted = True
             elif valid and m60 < m120:
-                acted = sell_to_ratio(i, 0.0, "MAW60跌破MAW120清仓")
+                sell_to_ratio(i, 0.0, "MAW60跌破MAW120清仓")
+                acted = True
             elif valid and below120_two:
-                acted = sell_to_ratio(i, 0.0, "跌破MAW120两日清仓")
+                sell_to_ratio(i, 0.0, "跌破MAW120两日清仓")
+                acted = True
             else:
                 risk_target = 1.0
                 risk_reason = ""
@@ -151,8 +157,10 @@ def run_trend_pullback(
                     risk_target, risk_reason = 0.4, "跌破MAW60减仓"
                 if loss <= -0.12 and 0.3 < risk_target:
                     risk_target, risk_reason = 0.3, "成本亏损12%减仓"
-                if risk_target < current_ratio:
-                    acted = sell_to_ratio(i, risk_target, risk_reason)
+                if risk_target < 1.0:
+                    if risk_target < current_ratio:
+                        sell_to_ratio(i, risk_target, risk_reason)
+                    acted = True
                 else:
                     profit_targets: list[tuple[float, str]] = []
                     if valid and close >= m20 * 1.12 and shrinking_three:
@@ -164,7 +172,8 @@ def run_trend_pullback(
                     if profit_targets:
                         profit_target, profit_reason = min(profit_targets, key=lambda item: item[0])
                         if profit_target < current_ratio:
-                            acted = sell_to_ratio(i, profit_target, profit_reason)
+                            sell_to_ratio(i, profit_target, profit_reason)
+                        acted = True
 
         if not acted and target >= 0.4:
             total_assets = cash + shares * close
