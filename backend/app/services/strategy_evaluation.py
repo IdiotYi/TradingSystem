@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import re
+import subprocess
 import json
 from pathlib import Path
 from statistics import mean, median
@@ -23,6 +24,13 @@ MAW_FIELDS = {"成交额", "成交量", "换手率"}
 NUMERIC_FIELDS = {"开盘", "最高", "最低", "收盘", "成交量", "成交额", "换手率"}
 COVERAGE_START = pd.Timestamp("2021-01-01")
 COVERAGE_END = pd.Timestamp("2025-12-31")
+
+
+def resolve_current_revision() -> str:
+    """Return the current Git HEAD revision for CLI-generated reports."""
+    return subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True, stderr=subprocess.DEVNULL
+    ).strip()
 
 
 def _max_drawdown(values: list[float]) -> float:
@@ -149,7 +157,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--revision")
     args = parser.parse_args()
-    result = evaluate_cached_strategies(args.data_dir, revision=args.revision)
+    revision = args.revision if args.revision is not None else resolve_current_revision()
+    result = evaluate_cached_strategies(args.data_dir, revision=revision)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 

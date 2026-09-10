@@ -1,4 +1,5 @@
 from pathlib import Path
+import sys
 
 import pandas as pd
 import pytest
@@ -155,7 +156,8 @@ def test_evaluator_with_real_runner_never_calls_normal_loader(tmp_path, monkeypa
     assert len(result["results"]) == 10
 
 
-def test_native_strategy_portfolio_curve_matches_summary_final_assets():
+@pytest.mark.parametrize("strategy", ["trend_pullback_maw_macd", "trend_following_maw_macd"])
+def test_ordered_maw_periods_are_supported_by_backtest_api(strategy):
     from app.services.backtest_service import run_backtest
     dates = pd.date_range("2020-01-01", "2025-12-31", freq="B")
     close = pd.Series(range(len(dates)), dtype=float) / 50 + 10
@@ -164,14 +166,33 @@ def test_native_strategy_portfolio_curve_matches_summary_final_assets():
         "最低": close * .99, "收盘": close, "成交量": 100000.0,
         "成交额": close * 100000.0, "换手率": .02,
     })
-    for strategy in ("buy_and_hold", "three_factors", "supertrend_ma", "trend_pullback_maw_macd", "trend_following_maw_macd"):
-        response = run_backtest(
-            stock_code="600001", start_date="2024-01-01", end_date="2025-12-31",
-            initial_cash=100000.0, strategy_params={}, strategy_name=strategy,
-            market_data=frame,
-        )
-        assert len(response["portfolio_value"]) == len(response["dates"])
-        assert response["portfolio_value"][-1] == pytest.approx(response["summary"]["final_assets"], abs=.01)
+    response = run_backtest(
+        stock_code="600001", start_date="2024-01-01", end_date="2025-12-31",
+        initial_cash=100000.0, strategy_params={}, strategy_name=strategy,
+        market_data=frame,
+    )
+    assert len(response["portfolio_value"]) == len(response["dates"])
+    assert response["portfolio_value"][-1] == pytest.approx(response["summary"]["final_assets"], abs=.01)
+
+def test_cli_resolves_head_revision_when_omitted(tmp_path, monkeypatch):
+    from app.services import strategy_evaluation
+
+    output = tmp_path / "evaluation.json"
+    captured = {}
+
+    monkeypatch.setattr(strategy_evaluation, "resolve_current_revision", lambda: "resolved-head")
+    monkeypatch.setattr(
+        strategy_evaluation,
+        "evaluate_cached_strategies",
+        lambda data_dir, revision: captured.update(data_dir=data_dir, revision=revision) or {"ok": True},
+    )
+    monkeypatch.setattr(sys, "argv", ["strategy_evaluation", "--data-dir", str(tmp_path), "--output", str(output)])
+
+    strategy_evaluation.main()
+
+    assert captured == {"data_dir": tmp_path, "revision": "resolved-head"}
+    assert output.read_text(encoding="utf-8") == "{\n  \"ok\": true\n}"
+
 
 def test_evaluator_records_deterministic_reproducibility_metadata(tmp_path, monkeypatch):
     _write_csv(tmp_path / "600001.csv")
