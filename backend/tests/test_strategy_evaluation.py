@@ -172,3 +172,16 @@ def test_native_strategy_portfolio_curve_matches_summary_final_assets():
         )
         assert len(response["portfolio_value"]) == len(response["dates"])
         assert response["portfolio_value"][-1] == pytest.approx(response["summary"]["final_assets"], abs=.01)
+
+def test_evaluator_records_deterministic_reproducibility_metadata(tmp_path, monkeypatch):
+    _write_csv(tmp_path / "600001.csv")
+    def fake_run(*, initial_cash, **kwargs):
+        return {"dates": ["2024-01-01"], "trades": [], "summary": {"total_return": 0.0, "final_assets": initial_cash}, "portfolio_value": [initial_cash]}
+    monkeypatch.setattr("app.services.strategy_evaluation.run_backtest", fake_run)
+    result = evaluate_cached_strategies(tmp_path, ["600001"], revision="abc123", generated_at="2026-05-03T00:00:00Z")
+    assert result["reproducibility"] == {
+        "revision": "abc123",
+        "generated_at": "2026-05-03T00:00:00Z",
+        "source_file_sha256": {"600001": result["reproducibility"]["source_file_sha256"]["600001"]},
+    }
+    assert len(result["reproducibility"]["source_file_sha256"]["600001"]) == 64

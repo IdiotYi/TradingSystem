@@ -302,6 +302,17 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
     df_all = market_data.copy() if market_data is not None else load_stock_data(stock_code)
     df_all = df_all[df_all["日期"] <= end_date].reset_index(drop=True)
 
+    trend_strategy = strategy_name in ("trend_pullback_maw_macd", "trend_following_maw_macd")
+    trend_parameters = None
+    if trend_strategy:
+        trend_parameters = {
+            "maw_short_period": int(strategy_params.get("maw_short_period", 20)),
+            "maw_medium_period": int(strategy_params.get("maw_medium_period", 60)),
+            "maw_long_period": int(strategy_params.get("maw_long_period", 120)),
+        }
+        if not (trend_parameters["maw_short_period"] < trend_parameters["maw_medium_period"] < trend_parameters["maw_long_period"]):
+            raise ValueError("MAW周期必须满足 short < medium < long")
+
     if strategy_name in ("three_factors", "three_factors_v2"):
         factors_fn = compute_three_factors_v2 if strategy_name == "three_factors_v2" else compute_three_factors
         factors = factors_fn(
@@ -329,7 +340,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         df_all["st_lower"] = st_lo
 
     trend_series = None
-    if strategy_name in ("trend_pullback_maw_macd", "trend_following_maw_macd"):
+    if trend_strategy:
         prepare_fn = prepare_trend_following_indicators if strategy_name == "trend_following_maw_macd" else prepare_trend_pullback_indicators
         run_fn = run_trend_following if strategy_name == "trend_following_maw_macd" else run_trend_pullback
         prepared_all = prepare_fn(
@@ -459,6 +470,7 @@ def run_backtest(stock_code: str, start_date: str, end_date: str,
         "success": True,
         "portfolio_value": portfolio_value,
         "strategy_name": strategy_name,
+        "trend_parameters": trend_parameters,
         "dates": df["日期"].tolist(),
         "open": _to_list(open_), "high": _to_list(high),
         "low": _to_list(low), "close": _to_list(close),

@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
+import hashlib
 import re
 import json
 from pathlib import Path
@@ -56,8 +58,12 @@ def _validate_frame(frame: pd.DataFrame) -> str | None:
     return None
 
 
-def evaluate_cached_strategies(data_dir: Path, codes: list[str] | None = None) -> dict:
+def evaluate_cached_strategies(
+    data_dir: Path, codes: list[str] | None = None, revision: str | None = None, generated_at: str | None = None
+) -> dict:
     data_dir = Path(data_dir)
+    generated_at = generated_at or datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    source_file_sha256 = {}
     if codes is None:
         codes = sorted(p.stem for p in data_dir.glob("[0-9][0-9][0-9][0-9][0-9][0-9].csv"))
     results = []
@@ -72,6 +78,7 @@ def evaluate_cached_strategies(data_dir: Path, codes: list[str] | None = None) -
         if not path.exists():
             skipped.append({"code": code, "reason": "cache file not found"})
             continue
+        source_file_sha256[code] = hashlib.sha256(path.read_bytes()).hexdigest()
         frame = pd.read_csv(path, encoding="utf-8-sig")
         reason = _validate_frame(frame)
         if reason:
@@ -119,6 +126,11 @@ def evaluate_cached_strategies(data_dir: Path, codes: list[str] | None = None) -
         }
     return {
         "evaluation_kind": "fixed_historical_comparison",
+        "reproducibility": {
+            "revision": revision,
+            "generated_at": generated_at,
+            "source_file_sha256": source_file_sha256,
+        },
         "parameter_selection_performed": False,
         "periods": PERIODS,
         "strategies": STRATEGIES,
@@ -135,8 +147,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--revision")
     args = parser.parse_args()
-    result = evaluate_cached_strategies(args.data_dir)
+    result = evaluate_cached_strategies(args.data_dir, revision=args.revision)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 

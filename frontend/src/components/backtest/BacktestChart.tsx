@@ -11,7 +11,11 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
 
     const chart = useMemo(() => {
       if (data.strategy_name === 'trend_pullback_maw_macd' || data.strategy_name === 'trend_following_maw_macd') {
-      const { dates, open, high, low, close, maw20, maw60, maw120, macd_dif, macd_dea, macd_histogram, target_position, position_ratio, trades } = data
+      const { dates, open, high, low, close, maw20, maw60, maw120, macd_dif, macd_dea, macd_histogram, target_position, position_ratio, trades, trend_parameters } = data
+      const trendPeriods = trend_parameters ?? { maw_short_period: 20, maw_medium_period: 60, maw_long_period: 120 }
+      const shortMawLabel = `MAW${trendPeriods.maw_short_period}`
+      const mediumMawLabel = `MAW${trendPeriods.maw_medium_period}`
+      const longMawLabel = `MAW${trendPeriods.maw_long_period}`
       const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])
       const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
       const markData = trades.map(t => {
@@ -23,7 +27,7 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
       const option = {
         backgroundColor: '#0d1117', animation: false,
         axisPointer: { link: [{ xAxisIndex: 'all' }] },
-        legend: { data: ['K线','MAW20','MAW60','MAW120','DIF','DEA','MACD柱','目标仓位','实际仓位'], top: 8, textStyle: { color:'#8b949e' } },
+        legend: { data: ['K线',shortMawLabel,mediumMawLabel,longMawLabel,'DIF','DEA','MACD柱','目标仓位','实际仓位'], top: 8, textStyle: { color:'#8b949e' } },
         tooltip: { trigger:'axis', axisPointer:{type:'cross'}, backgroundColor:'rgba(22,27,34,.95)', borderColor:'#30363d', textStyle:{color:'#e6edf3'} },
         grid: [
           { left:'6%', right:'3%', top:50, height:'43%' },
@@ -39,9 +43,9 @@ const BacktestChart: React.FC<Props> = ({ data }) => {
         dataZoom: [{type:'inside',xAxisIndex:[0,1,2],start:0,end:100},{type:'slider',xAxisIndex:[0,1,2],bottom:18,start:0,end:100,borderColor:'#30363d',textStyle:{color:'#8b949e'}}],
         series: [
           {name:'K线',type:'candlestick',xAxisIndex:0,yAxisIndex:0,data:candleData,itemStyle:{color:'#ef5350',color0:'#26a69a',borderColor:'#ef5350',borderColor0:'#26a69a'},markPoint:{data:markData,animation:false}},
-          {name:'MAW20',type:'line',xAxisIndex:0,yAxisIndex:0,data:maw20,showSymbol:false,lineStyle:{color:'#ffd700'}},
-          {name:'MAW60',type:'line',xAxisIndex:0,yAxisIndex:0,data:maw60,showSymbol:false,lineStyle:{color:'#1890ff'}},
-          {name:'MAW120',type:'line',xAxisIndex:0,yAxisIndex:0,data:maw120,showSymbol:false,lineStyle:{color:'#b57bee',width:2}},
+          {name:shortMawLabel,type:'line',xAxisIndex:0,yAxisIndex:0,data:maw20,showSymbol:false,lineStyle:{color:'#ffd700'}},
+          {name:mediumMawLabel,type:'line',xAxisIndex:0,yAxisIndex:0,data:maw60,showSymbol:false,lineStyle:{color:'#1890ff'}},
+          {name:longMawLabel,type:'line',xAxisIndex:0,yAxisIndex:0,data:maw120,showSymbol:false,lineStyle:{color:'#b57bee',width:2}},
           {name:'DIF',type:'line',xAxisIndex:1,yAxisIndex:1,data:macd_dif,showSymbol:false,lineStyle:{color:'#ffd700'}},
           {name:'DEA',type:'line',xAxisIndex:1,yAxisIndex:1,data:macd_dea,showSymbol:false,lineStyle:{color:'#1890ff'}},
           {name:'MACD柱',type:'bar',xAxisIndex:1,yAxisIndex:1,data:histogram,barMaxWidth:5},

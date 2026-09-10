@@ -70,9 +70,16 @@ export interface BacktestSummary {
   rebalance_count: number
 }
 
+export interface TrendParameters {
+  maw_short_period: number
+  maw_medium_period: number
+  maw_long_period: number
+}
+
 export interface BacktestResponse {
   success: boolean
   strategy_name: StockStrategyName
+  trend_parameters: TrendParameters | null
   dates: string[]
   open: (number | null)[]
   high: (number | null)[]

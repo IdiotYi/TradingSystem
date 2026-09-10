@@ -186,3 +186,27 @@ def test_return_focused_trend_api_isolates_warmup_reaches_full_target_and_keeps_
     assert first["remaining_cash"] == pytest.approx(
         request["initial_cash"] - first["amount"] - first["total_fee"], abs=0.01
     )
+
+def test_trend_strategy_rejects_unordered_maw_periods(monkeypatch):
+    monkeypatch.setattr("app.services.backtest_service.load_stock_data", lambda _: _frame())
+    request = _request("trend_following_maw_macd")
+    request["strategy_params"] = {"maw_short_period": 120, "maw_medium_period": 20, "maw_long_period": 60}
+    response = client.post("/api/backtest/run", json=request)
+    assert response.status_code == 400
+    assert "MAW周期必须满足" in response.json()["detail"]
+
+
+def test_trend_response_exposes_actual_maw_periods(monkeypatch):
+    monkeypatch.setattr("app.services.backtest_service.load_stock_data", lambda _: _frame())
+    request = _request("trend_following_maw_macd")
+    request["strategy_params"] = {"maw_short_period": 10, "maw_medium_period": 30, "maw_long_period": 90}
+    response = client.post("/api/backtest/run", json=request)
+    assert response.status_code == 200, response.text
+    assert response.json()["trend_parameters"] == {"maw_short_period": 10, "maw_medium_period": 30, "maw_long_period": 90}
+
+
+def test_legacy_response_has_null_trend_parameters(monkeypatch):
+    monkeypatch.setattr("app.services.backtest_service.load_stock_data", lambda _: _frame())
+    response = client.post("/api/backtest/run", json=_request("buy_and_hold"))
+    assert response.status_code == 200, response.text
+    assert response.json()["trend_parameters"] is None
