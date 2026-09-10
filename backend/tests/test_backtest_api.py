@@ -187,9 +187,10 @@ def test_return_focused_trend_api_isolates_warmup_reaches_full_target_and_keeps_
         request["initial_cash"] - first["amount"] - first["total_fee"], abs=0.01
     )
 
-def test_trend_strategy_rejects_unordered_maw_periods(monkeypatch):
+@pytest.mark.parametrize("strategy_name", ["trend_pullback_maw_macd", "trend_following_maw_macd"])
+def test_trend_strategies_reject_unordered_maw_periods(monkeypatch, strategy_name):
     monkeypatch.setattr("app.services.backtest_service.load_stock_data", lambda _: _frame())
-    request = _request("trend_following_maw_macd")
+    request = _request(strategy_name)
     request["strategy_params"] = {"maw_short_period": 120, "maw_medium_period": 20, "maw_long_period": 60}
     response = client.post("/api/backtest/run", json=request)
     assert response.status_code == 400
