@@ -18,10 +18,13 @@ def get_analysis_data(stock_code: str) -> dict:
     volume = df["成交量"]
     dates = df["日期"]
 
-    # Turnover-weighted MA of daily VWAP (avg trade price = 成交额 / 成交量, adjusted by qfq factor)
-    if "成交额" in df.columns and "换手率" in df.columns:
+    nan_series = pd.Series(np.nan, index=df.index)
+    vwap = nan_series
+    indicator_warnings = []
+    # Daily average price only needs amount and volume; turnover is needed
+    # separately for MAW. A partial provider must not hide available VWAP.
+    if "成交额" in df.columns:
         amount = pd.to_numeric(df["成交额"], errors="coerce")
-        turnover = pd.to_numeric(df["换手率"], errors="coerce")
         vol_num = pd.to_numeric(volume, errors="coerce")
         vwap_raw = amount / vol_num.where(vol_num > 0)
 
@@ -34,6 +37,8 @@ def get_analysis_data(stock_code: str) -> dict:
         else:
             vwap = vwap_raw
 
+    if "成交额" in df.columns and "换手率" in df.columns:
+        turnover = pd.to_numeric(df["换手率"], errors="coerce")
         weighted = (vwap * turnover).where(turnover.notna() & vwap.notna())
 
         def _maw(n: int) -> pd.Series:
@@ -46,10 +51,13 @@ def get_analysis_data(stock_code: str) -> dict:
         maw20  = _maw(20)
         maw60  = _maw(60)
         maw120 = _maw(120)
+        maw243 = _maw(243)
     else:
-        nan_series = pd.Series([np.nan] * len(df))
-        vwap = nan_series
-        maw5 = maw10 = maw20 = maw60 = maw120 = nan_series
+        maw5 = maw10 = maw20 = maw60 = maw120 = maw243 = nan_series
+        if "成交额" not in df.columns:
+            indicator_warnings.append("当前行情缺少成交额，无法计算均价和MAW；请点击顶部「刷新数据」重试。")
+        else:
+            indicator_warnings.append("当前行情缺少换手率，MAW及其上下轨暂不可用，均价仍可显示；请点击顶部「刷新数据」重试。")
 
     ma5 = calc_ma(close, 5)
     ma20 = calc_ma(close, 20)
@@ -73,6 +81,7 @@ def get_analysis_data(stock_code: str) -> dict:
 
     return {
         "success": True,
+        "indicator_warnings": indicator_warnings,
         "stock_code": stock_code.strip(),
         "dates": dates.tolist(),
         "open": _to_list(open_),
@@ -88,6 +97,7 @@ def get_analysis_data(stock_code: str) -> dict:
         "maw20": _to_list(maw20),
         "maw60": _to_list(maw60),
         "maw120": _to_list(maw120),
+        "maw243": _to_list(maw243),
         "vwap": _to_list(vwap),
         "kama": _to_list(kama),
         "supertrend": _to_list(supertrend),

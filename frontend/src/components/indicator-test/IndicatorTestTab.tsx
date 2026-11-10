@@ -1,5 +1,5 @@
 import React from 'react'
-import { Spin, Empty } from 'antd'
+import { Spin, Empty, Alert } from 'antd'
 import type { AnalysisResponse } from '../../types/stock'
 import WMAChart from './WMAChart'
 
@@ -28,6 +28,9 @@ const IndicatorTestTab: React.FC<Props> = ({ data, loading }) => {
 
   return (
     <div>
+      {data.indicator_warnings?.map(warning => (
+        <Alert key={warning} type="warning" showIcon message={warning} style={{ marginBottom: 12 }} />
+      ))}
       <WMAChart data={data} />
     </div>
   )

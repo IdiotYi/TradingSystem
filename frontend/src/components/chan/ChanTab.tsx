@@ -13,6 +13,7 @@ interface Props {
 
 const { RangePicker } = DatePicker
 const PERIOD_OPTIONS: Array<{ value: ChanPeriod; label: string }> = [
+  { value: 'weekly', label: '周线' },
   { value: 'daily', label: '日线' },
   { value: '30', label: '30分钟' },
   { value: '5', label: '5分钟' },
@@ -133,7 +134,7 @@ const ChanTab: React.FC<Props> = ({ stockCode, dailyDataGeneration }) => {
 
     latestDailyDataGenerationRef.current = dailyDataGeneration
 
-    if (!stockCode || period !== 'daily') {
+    if (!stockCode || (period !== 'daily' && period !== 'weekly')) {
       return
     }
 
@@ -181,7 +182,7 @@ const ChanTab: React.FC<Props> = ({ stockCode, dailyDataGeneration }) => {
   }
 
   const handleRefresh = async () => {
-    if (!stockCode || period === 'daily') return
+    if (!stockCode || (period !== '30' && period !== '5')) return
 
     const actionId = beginAction()
     const requestId = latestRefreshRequestRef.current + 1
@@ -266,7 +267,7 @@ const ChanTab: React.FC<Props> = ({ stockCode, dailyDataGeneration }) => {
             运行分析
           </Button>
         </Form.Item>
-        {period !== 'daily' && (
+        {(period === '30' || period === '5') && (
           <Form.Item>
             <Button
               icon={refreshing ? <Spin size="small" /> : <SyncOutlined />}
@@ -296,7 +297,7 @@ const ChanTab: React.FC<Props> = ({ stockCode, dailyDataGeneration }) => {
 
       {!loading && result && (
         <>
-          {result.period !== 'daily' && !result.target_coverage_met && (
+          {(result.period === '30' || result.period === '5') && !result.target_coverage_met && (
             <Alert
               type="warning"
               showIcon
@@ -314,6 +315,11 @@ const ChanTab: React.FC<Props> = ({ stockCode, dailyDataGeneration }) => {
             笔数 <b style={{ color: '#e6edf3' }}>{result.pens.length}</b>
           </div>
           <ChanChart data={result} />
+          {result.period === 'weekly' && (
+            <div style={{ color: '#8b949e', marginTop: 8 }}>
+              周线按自然周合成，日期为该周最后一个交易日；截止日期所在周可能尚未完整。更新周线请使用顶部「刷新数据」。
+            </div>
+          )}
         </>
       )}
     </div>

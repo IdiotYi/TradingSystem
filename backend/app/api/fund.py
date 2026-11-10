@@ -38,7 +38,7 @@ def _raise_fund_http_error(exc: Exception, action: str) -> None:
 
 
 @router.post("/analysis")
-async def analyze_fund(request: FundCodeRequest):
+def analyze_fund(request: FundCodeRequest):
     try:
         return get_fund_analysis(request.fund_code)
     except Exception as exc:
@@ -46,7 +46,7 @@ async def analyze_fund(request: FundCodeRequest):
 
 
 @router.post("/refresh")
-async def refresh_fund_endpoint(request: FundCodeRequest):
+def refresh_fund_endpoint(request: FundCodeRequest):
     try:
         return refresh_fund(request.fund_code)
     except Exception as exc:
@@ -54,7 +54,7 @@ async def refresh_fund_endpoint(request: FundCodeRequest):
 
 
 @router.post("/backtest")
-async def backtest_fund(request: FundBacktestRequest):
+def backtest_fund(request: FundBacktestRequest):
     try:
         return run_fund_backtest(
             fund_code=request.fund_code,

@@ -10,14 +10,14 @@ interface Props {
 const ChanChart: React.FC<Props> = ({ data }) => {
   const option = useMemo(() => {
     const { dates, open, high, low, close, pens } = data
-    const period = (data as ChanResponse & { period: 'daily' | 'intraday' }).period
+    const isDateOnly = data.period === 'daily' || data.period === 'weekly'
     const formatAxisLabel = (value: string) => {
-      if (period === 'daily') return value.slice(0, 7)
+      if (isDateOnly) return value.slice(0, 7)
       return value.slice(5, 16)
     }
 
     const formatTooltipDate = (value: string) =>
-      period === 'daily' ? value.slice(0, 10) : value.slice(0, 16)
+      isDateOnly ? value.slice(0, 10) : value.slice(0, 16)
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
     const priceDecimals = detectPriceDecimals([...close, ...open, ...high, ...low])

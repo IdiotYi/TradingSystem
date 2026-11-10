@@ -10,7 +10,7 @@ class AnalysisRequest(BaseModel):
 
 
 @router.post("/run")
-async def run_analysis(request: AnalysisRequest):
+def run_analysis(request: AnalysisRequest):
     try:
         return get_analysis_data(request.stock_code)
     except ValueError as e:

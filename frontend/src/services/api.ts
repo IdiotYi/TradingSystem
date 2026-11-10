@@ -37,7 +37,7 @@ export async function runChanAnalysis(request: ChanRequest): Promise<ChanRespons
 
 export async function refreshChanData(
   stockCode: string,
-  period: Exclude<ChanPeriod, 'daily'>,
+  period: Exclude<ChanPeriod, 'daily' | 'weekly'>,
 ): Promise<ChanRefreshResponse> {
   const { data } = await client.post<ChanRefreshResponse>('/chan/refresh', {
     stock_code: stockCode,

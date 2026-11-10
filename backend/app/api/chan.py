@@ -12,7 +12,7 @@ router = APIRouter()
 
 class ChanRequest(BaseModel):
     stock_code: str
-    period: Literal["daily", "30", "5"] = "daily"
+    period: Literal["weekly", "daily", "30", "5"] = "daily"
     start_date: str = "2023-01-01"
     end_date: Optional[str] = None
 
@@ -31,7 +31,7 @@ def _raise_chan_http_error(exc: Exception, action: str) -> None:
 
 
 @router.post("/analyze")
-async def analyze(req: ChanRequest):
+def analyze(req: ChanRequest):
     try:
         return analyze_chan(req.stock_code, req.start_date, req.end_date, req.period)
     except Exception as exc:
@@ -39,7 +39,7 @@ async def analyze(req: ChanRequest):
 
 
 @router.post("/refresh")
-async def refresh(req: ChanRefreshRequest):
+def refresh(req: ChanRefreshRequest):
     try:
         return refresh_minute_data(req.stock_code, req.period)
     except Exception as exc:

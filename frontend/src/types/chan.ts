@@ -8,7 +8,7 @@ export interface ChanPen {
   direction: 'up' | 'down'
 }
 
-export type ChanPeriod = 'daily' | '30' | '5'
+export type ChanPeriod = 'weekly' | 'daily' | '30' | '5'
 
 export interface ChanRequest {
   stock_code: string
@@ -37,7 +37,7 @@ export interface ChanResponse {
 
 export interface ChanRefreshResponse {
   stock_code: string
-  period: Exclude<ChanPeriod, 'daily'>
+  period: Exclude<ChanPeriod, 'daily' | 'weekly'>
   rows: number
   coverage_from: string
   coverage_to: string

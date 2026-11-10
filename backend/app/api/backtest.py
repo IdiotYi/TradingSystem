@@ -46,7 +46,7 @@ class BacktestRequest(BaseModel):
 
 
 @router.post("/run")
-async def run_backtest_endpoint(request: BacktestRequest):
+def run_backtest_endpoint(request: BacktestRequest):
     try:
         return run_backtest(
             stock_code=request.stock_code,

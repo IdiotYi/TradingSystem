@@ -1,4 +1,7 @@
+import json
 import math
+import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 from typing import Literal, cast
@@ -20,6 +23,7 @@ MINUTE_COLUMNS = [
     "成交量", "成交额", "复权", "数据源",
 ]
 VALID_PERIODS = {"5", "30"}
+BAOSTOCK_TIMEOUT_SECONDS = 45
 
 _BAOSTOCK_COLUMNS = [
     "date", "time", "code", "open", "high",
@@ -222,6 +226,34 @@ def _download_baostock(
     start_date: date,
     end_date: date,
 ) -> pd.DataFrame:
+    # BaoStock has a process-global socket and unbounded recv calls. A child
+    # isolates concurrent requests and can be killed even when recv never returns.
+    try:
+        result = subprocess.run(
+            [sys.executable, '-X', 'utf8', '-m', 'app.services.baostock_worker',
+             code, period, start_date.isoformat(), end_date.isoformat()],
+            cwd=Path(__file__).resolve().parents[2],
+            capture_output=True, text=True, encoding='utf-8',
+            timeout=BAOSTOCK_TIMEOUT_SECONDS,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0),
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise TimeoutError(f'BaoStock 下载超时（{BAOSTOCK_TIMEOUT_SECONDS}秒）') from exc
+    if result.returncode != 0:
+        raise ValueError(f'BaoStock 下载失败: {result.stderr.strip()}')
+    payload = json.loads(result.stdout)
+    return _require_history_rows(
+        pd.DataFrame(payload['data'], columns=payload['columns']), 'BaoStock',
+    )
+
+
+def _download_baostock_direct(
+    code: str,
+    period: MinutePeriod,
+    start_date: date,
+    end_date: date,
+) -> pd.DataFrame:
+    """Run only inside the isolated BaoStock worker."""
     login = bs.login()
     if login.error_code != "0":
         raise ValueError(f"BaoStock 登录失败: {login.error_msg}")

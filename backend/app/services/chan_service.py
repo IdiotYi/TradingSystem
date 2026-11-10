@@ -9,7 +9,7 @@ from app.services.data_service import load_stock_data
 from app.services.minute_data_service import load_minute_data
 
 
-VALID_CHAN_PERIODS = {"daily", "30", "5"}
+VALID_CHAN_PERIODS = {"weekly", "daily", "30", "5"}
 MAX_CHAN_BARS = 20_000
 
 
@@ -17,12 +17,12 @@ def _load_chan_frame(stock_code: str, period: str) -> tuple[pd.DataFrame, dict]:
     if period not in VALID_CHAN_PERIODS:
         raise ValueError(f"缠论周期必须为 {sorted(VALID_CHAN_PERIODS)}")
 
-    if period == "daily":
-        frame = load_stock_data(stock_code).rename(columns={"日期": "时间"})
+    if period in {"daily", "weekly"}:
+        frame = load_stock_data(stock_code).rename(columns={"日期": "时间"}).sort_values("时间")
         return frame, {
             "coverage_from": frame["时间"].iloc[0],
             "coverage_to": frame["时间"].iloc[-1],
-            "data_source": "stock_daily_cache",
+            "data_source": "stock_daily_cache_weekly" if period == "weekly" else "stock_daily_cache",
             "target_coverage_met": True,
         }
 
@@ -44,6 +44,16 @@ def analyze_chan(
     end_ts = pd.Timestamp(end_date)
     if period != "daily" and re.fullmatch(r"\d{4}-\d{2}-\d{2}", str(end_date).strip()):
         end_ts += pd.Timedelta(days=1) - pd.Timedelta(nanoseconds=1)
+    if period == "weekly":
+        # Cut off future daily prices before grouping. Include the available
+        # portion of the final week and label it with its last trading date.
+        frame = frame.loc[timestamps <= end_ts]
+        weeks = pd.to_datetime(frame["时间"]).dt.to_period("W-SUN")
+        frame = frame.groupby(weeks, sort=True).agg({
+            "时间": "last", "开盘": "first", "最高": "max",
+            "最低": "min", "收盘": "last",
+        }).reset_index(drop=True)
+        timestamps = pd.to_datetime(frame["时间"])
     df = frame.loc[(timestamps >= start_ts) & (timestamps <= end_ts)].reset_index(drop=True)
     if len(df) < 10:
         raise ValueError(f"数据不足，仅 {len(df)} 行（需至少 10 行）")

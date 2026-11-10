@@ -10,7 +10,7 @@ class RefreshRequest(BaseModel):
 
 
 @router.post("/refresh")
-async def refresh_data(request: RefreshRequest):
+def refresh_data(request: RefreshRequest):
     try:
         return refresh_stock_data(request.stock_code)
     except ValueError as e:

@@ -1,5 +1,6 @@
 export interface AnalysisResponse {
   success: boolean
+  indicator_warnings?: string[]
   stock_code: string
   dates: string[]
   open: (number | null)[]
@@ -15,6 +16,7 @@ export interface AnalysisResponse {
   maw20: (number | null)[]
   maw60: (number | null)[]
   maw120: (number | null)[]
+  maw243: (number | null)[]
   vwap: (number | null)[]
   kama: (number | null)[]
   supertrend: (number | null)[]

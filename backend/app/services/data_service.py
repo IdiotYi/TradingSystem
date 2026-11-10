@@ -18,7 +18,7 @@ def normalize_code(stock_code: str) -> str:
 
 
 def _exchange_prefix(code: str) -> str:
-    if code.startswith("6"):
+    if code.startswith(("5", "6")):
         return f"sh{code}"
     elif code.startswith(("0", "3")):
         return f"sz{code}"
@@ -61,9 +61,24 @@ def _download(code: str, csv_path: Path) -> None:
     # 2. stock_zh_a_hist 东方财富（fallback）
     if df is None or df.empty:
         try:
-            df = ak.stock_zh_a_hist(symbol=code, period="daily", adjust="qfq")
+            history = ak.fund_etf_hist_em if code.startswith(("1", "5")) else ak.stock_zh_a_hist
+            df = history(symbol=code, period="daily", adjust="qfq")
             if df is None or df.empty:
                 df = None
+            else:
+                # Eastmoney reports lots (100 shares/ETF units), while Sina
+                # and our VWAP/MAW calculations use individual shares/units.
+                df["成交量"] = pd.to_numeric(df["成交量"], errors="raise") * 100
+                if code.startswith(("1", "5")):
+                    # ETF distributions/splits can make raw transaction prices
+                    # differ from adjusted candles. Carry the adjustment factor.
+                    raw = history(symbol=code, period="daily", adjust="")
+                    if raw is None or raw.empty:
+                        raise ValueError("ETF未复权行情不可用")
+                    df = df.merge(
+                        raw[["日期", "收盘"]].rename(columns={"收盘": "收盘_未复权"}),
+                        on="日期", how="left", validate="one_to_one",
+                    )
         except Exception:
             df = None
 
@@ -76,6 +91,7 @@ def _download(code: str, csv_path: Path) -> None:
                 df.rename(columns={
                     "date": "日期", "open": "开盘", "high": "最高",
                     "low": "最低", "close": "收盘", "volume": "成交量",
+                    "amount": "成交额",
                 }, inplace=True)
                 df.insert(1, "股票代码", code)
             else:
@@ -84,9 +100,12 @@ def _download(code: str, csv_path: Path) -> None:
             df = None
 
     if df is None or df.empty:
-        raise ValueError(f"无法获取股票 {code} 的数据，请确认代码正确（已尝试股票/ETF接口）。")
+        raise ValueError(f"暂时无法获取股票/ETF {code} 的行情（已尝试多个数据源），请稍后重试或检查代码是否受支持。")
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
+    if "股票代码" not in df.columns:
+        df.insert(1, "股票代码", code)
+    df["volume_unit"] = "shares"
     df.to_csv(csv_path, index=False, encoding="utf-8-sig")
 
 
@@ -121,4 +140,13 @@ def load_stock_data(stock_code: str) -> pd.DataFrame:
     df = pd.read_csv(csv_path, encoding="utf-8-sig")
     df["日期"] = pd.to_datetime(df["日期"]).dt.strftime("%Y-%m-%d")
     df = df.sort_values("日期").reset_index(drop=True)
+    # Older unmarked Eastmoney caches were written in the provider's lot
+    # units. Recognize that provider's schema, not price-based heuristics.
+    # Normalize only in memory to preserve the original cache on disk.
+    eastmoney_fields = {"成交量", "成交额", "振幅", "涨跌幅", "涨跌额", "换手率"}
+    if "volume_unit" not in df.columns and eastmoney_fields.issubset(df.columns):
+        df["成交量"] = pd.to_numeric(df["成交量"], errors="raise") * 100
+        df["volume_unit"] = "shares"
+    if "成交额" not in df.columns and "amount" in df.columns:
+        df = df.rename(columns={"amount": "成交额"})
     return df

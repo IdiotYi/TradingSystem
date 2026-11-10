@@ -3,6 +3,7 @@ import ReactECharts from 'echarts-for-react'
 import type { AnalysisResponse } from '../../types/stock'
 import { detectPriceDecimals } from '../../utils/priceFormat'
 import { computeSMA } from '../../utils/wma'
+import { createMawSeries } from '../../utils/mawSeries'
 
 interface Props {
   data: AnalysisResponse
@@ -30,11 +31,19 @@ const WMAChart: React.FC<Props> = ({ data }) => {
     const ma67   = ma67Full.slice(start)
     const ma133  = ma133Full.slice(start)
     const nullArr = new Array(n - start).fill(null) as (number | null)[]
-    const maw5   = data.maw5   ? data.maw5.slice(start)   : nullArr
-    const maw10  = data.maw10  ? data.maw10.slice(start)  : nullArr
-    const maw20  = data.maw20  ? data.maw20.slice(start)  : nullArr
-    const maw60  = data.maw60  ? data.maw60.slice(start)  : nullArr
-    const maw120 = data.maw120 ? data.maw120.slice(start) : nullArr
+    const mawGroups = [
+      { name: 'MAW5', values: data.maw5, color: '#ffffff' },
+      { name: 'MAW10', values: data.maw10, color: '#ffd700' },
+      { name: 'MAW20', values: data.maw20, color: '#ef5350' },
+      { name: 'MAW60', values: data.maw60, color: '#1890ff' },
+      { name: 'MAW120', values: data.maw120, color: '#26a69a' },
+      { name: 'MAW243', values: data.maw243, color: '#d980fa' },
+    ]
+    const mawSeries = mawGroups.flatMap(({ name, values, color }) =>
+      createMawSeries(name, values?.slice(start) ?? nullArr, color),
+    )
+    const mawLabels = new Map(mawSeries.map(series => [series.id, series.id]))
+    const legendNames = ['K线', '均价', 'MA7', 'MA23', 'MA67', 'MA133', ...mawGroups.map(group => group.name)]
     const vwap   = data.vwap   ? data.vwap.slice(start)   : nullArr
 
     const candleData = dates.map((_, i) => [open[i], close[i], low[i], high[i]])
@@ -52,13 +61,18 @@ const WMAChart: React.FC<Props> = ({ data }) => {
       animation: false,
       axisPointer: { link: [{ xAxisIndex: 'all' }] },
       legend: {
-        data: ['K线', '均价', 'MA7', 'MA23', 'MA67', 'MA133', 'MAW5', 'MAW10', 'MAW20', 'MAW60', 'MAW120'],
+        data: legendNames,
+        selected: Object.fromEntries(legendNames.map(name => [name, name === 'K线' || name === 'MAW243'])),
+        type: 'scroll',
         top: 8,
         textStyle: { color: '#8b949e' },
         inactiveColor: '#444',
       },
       tooltip: {
         trigger: 'axis',
+        confine: true,
+        enterable: true,
+        extraCssText: 'max-height: 360px; overflow-y: auto;',
         axisPointer: { type: 'cross', crossStyle: { color: '#555' } },
         backgroundColor: 'rgba(22,27,34,0.95)',
         borderColor: '#30363d',
@@ -72,8 +86,9 @@ const WMAChart: React.FC<Props> = ({ data }) => {
           params.forEach((p: any) => {
             if (p.seriesName === 'K线' || p.seriesName === '成交量') return
             const v = Array.isArray(p.value) ? p.value[1] : p.value
-            if (v == null) return
-            html += `<div style="color:${p.color}">${p.seriesName}: ${Number(v).toFixed(priceDecimals)}</div>`
+            if (v == null || !Number.isFinite(Number(v))) return
+            const label = mawLabels.get(p.seriesId) ?? p.seriesName
+            html += `<div style="color:${p.color}">${label}: ${Number(v).toFixed(priceDecimals)}</div>`
           })
           if (volume[idx] != null) {
             const fmt = (v: number) => v >= 1e8 ? `${(v / 1e8).toFixed(2)}亿` : v >= 1e4 ? `${(v / 1e4).toFixed(0)}万` : String(v)
@@ -149,16 +164,7 @@ const WMAChart: React.FC<Props> = ({ data }) => {
           lineStyle: { color: '#b57bee', width: 1 }, showSymbol: false },
         { name: 'MA133', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: ma133,
           lineStyle: { color: '#00bcd4', width: 1 }, showSymbol: false },
-        { name: 'MAW5',  type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw5,
-          lineStyle: { color: '#ffffff', width: 1.2, type: 'dashed' }, showSymbol: false },
-        { name: 'MAW10', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw10,
-          lineStyle: { color: '#ffd700', width: 1.2, type: 'dashed' }, showSymbol: false },
-        { name: 'MAW20', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw20,
-          lineStyle: { color: '#ef5350', width: 1.2, type: 'dashed' }, showSymbol: false },
-        { name: 'MAW60', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw60,
-          lineStyle: { color: '#1890ff', width: 1.2, type: 'dashed' }, showSymbol: false },
-        { name: 'MAW120', type: 'line', xAxisIndex: 0, yAxisIndex: 0, data: maw120,
-          lineStyle: { color: '#26a69a', width: 1.2, type: 'dashed' }, showSymbol: false },
+        ...mawSeries,
         {
           name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1,
           data: volData,

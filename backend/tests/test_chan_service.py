@@ -238,3 +238,87 @@ def test_refresh_endpoint_maps_value_error_to_400(monkeypatch):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "分钟数据刷新失败"
+
+
+def make_weekly_daily_frame():
+    # Each Monday/Wednesday/Friday has deliberately distinct OHLC values.
+    rows = []
+    wave = [10, 12, 14, 13, 11, 9, 8, 10, 13, 15]
+    for week in range(40):
+        monday = pd.Timestamp('2026-01-05') + pd.Timedelta(weeks=week)
+        base = wave[week % len(wave)]
+        for offset, shift in [(0, 0), (2, 1), (4, 2)]:
+            rows.append({
+                '日期': (monday + pd.Timedelta(days=offset)).strftime('%Y-%m-%d'),
+                '开盘': base + shift, '最高': base + shift + 3,
+                '最低': base + shift - 2, '收盘': base + shift + 1,
+            })
+    return pd.DataFrame(rows)
+
+
+def test_weekly_api_aggregates_daily_ohlc_and_runs_weekly_pens(monkeypatch):
+    frame = make_weekly_daily_frame()
+    monkeypatch.setattr('app.services.chan_service.load_stock_data', lambda _: frame)
+    monkeypatch.setattr('app.services.chan_service.load_minute_data',
+                        lambda *args: pytest.fail('Weekly must use daily data'))
+    response = post_json('/api/chan/analyze', {
+        'stock_code': '002156', 'period': 'weekly',
+        'start_date': '2026-01-01', 'end_date': '2026-10-09',
+    })
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result['period'] == 'weekly'
+    assert len(result['dates']) == 40
+    assert result['dates'][0] == '2026-01-09'
+    assert result['open'][0] == 10
+    assert result['high'][0] == 15
+    assert result['low'][0] == 8
+    assert result['close'][0] == 13
+    assert result['data_source'] == 'stock_daily_cache_weekly'
+    bars = [Bar(idx=i, date=d, high=h, low=l) for i, (d, h, l) in enumerate(
+        zip(result['dates'], result['high'], result['low']))]
+    merged = merge_kbars(bars)
+    expected = detect_pens(merged, detect_fractals(merged), raw_bars=bars)
+    assert expected
+    assert [(p['start_idx'], p['end_idx']) for p in result['pens']] == [
+        (p.start_src_idx, p.end_src_idx) for p in expected
+    ]
+
+
+def test_weekly_midweek_end_excludes_future_daily_prices(monkeypatch):
+    frame = make_weekly_daily_frame()
+    frame.loc[frame['日期'] == '2026-03-13', ['最高', '收盘']] = 9999
+    monkeypatch.setattr('app.services.chan_service.load_stock_data', lambda _: frame)
+    result = analyze_chan('002156', '2026-01-01', '2026-03-11', period='weekly')
+    assert len(result['dates']) == 10
+    assert result['response_to'] == '2026-03-11'
+    assert result['open'][-1] == 15
+    assert result['high'][-1] == 19
+    assert result['low'][-1] == 13
+    assert result['close'][-1] == 17
+
+
+def test_weekly_uses_actual_last_trading_day_and_skips_empty_weeks(monkeypatch):
+    frame = make_weekly_daily_frame()
+    frame = frame.loc[~frame['日期'].isin(['2026-01-09', '2026-01-12', '2026-01-14', '2026-01-16'])]
+    monkeypatch.setattr('app.services.chan_service.load_stock_data', lambda _: frame.iloc[::-1])
+    result = analyze_chan('002156', '2026-01-01', '2026-10-09', period='weekly')
+    assert len(result['dates']) == 39
+    assert result['dates'][:2] == ['2026-01-07', '2026-01-23']
+    assert result['open'][0] == 10
+    assert result['close'][0] == 12
+
+
+def test_weekly_requires_ten_weekly_bars_not_ten_daily_bars(monkeypatch):
+    monkeypatch.setattr('app.services.chan_service.load_stock_data', lambda _: make_weekly_daily_frame())
+    response = post_json('/api/chan/analyze', {
+        'stock_code': '002156', 'period': 'weekly',
+        'start_date': '2026-01-01', 'end_date': '2026-01-30',
+    })
+    assert response.status_code == 400
+    assert '4' in response.json()['detail']
+
+
+def test_weekly_cannot_be_sent_to_minute_refresh_endpoint():
+    response = post_json('/api/chan/refresh', {'stock_code': '002156', 'period': 'weekly'})
+    assert response.status_code == 422
